@@ -1,0 +1,150 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile with role and permissions",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["ADMIN", "TEAM", "CLIENT"] },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "avatarUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Workspace": {
+      "title": "Workspace",
+      "description": "Agency workspace settings, brands, and catalog items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "settings": { "type": "object" },
+        "data": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "CrmContact": {
+      "title": "CrmContact",
+      "description": "Client lead or contact in the CRM",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "whatsapp": { "type": "string", "maxLength": 32 },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "companyName": { "type": "string", "maxLength": 128 },
+        "lifecycleStage": { "type": "string" },
+        "leadScore": { "type": "number" },
+        "assignedToId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "fullName"]
+    },
+    "CrmCompany": {
+      "title": "CrmCompany",
+      "description": "Client company or B2B account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "sector": { "type": "string", "maxLength": 128 },
+        "website": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 128 },
+        "clientStatus": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "CrmDeal": {
+      "title": "CrmDeal",
+      "description": "Sales pipeline deal or commercial opportunity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "pipelineId": { "type": "string", "maxLength": 128 },
+        "stageId": { "type": "string", "maxLength": 128 },
+        "value": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 8 },
+        "priority": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+        "contactId": { "type": "string", "maxLength": 128 },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "assignedTo": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "title", "pipelineId", "stageId", "value"]
+    },
+    "QuoteProposal": {
+      "title": "QuoteProposal",
+      "description": "Agency commercial quote and proposal document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "quoteNumber": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["DRAFT", "SENT", "ACCEPTED", "REJECTED", "EXPIRED"] },
+        "totalAmount": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 8 },
+        "client": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "quoteNumber", "title", "status", "totalAmount"]
+    },
+    "FollowUp": {
+      "title": "FollowUp",
+      "description": "Commercial follow up reminder or scheduled call/task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["PENDING", "DONE", "CANCELLED"] },
+        "priority": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+        "channel": { "type": "string", "maxLength": 64 },
+        "dueDate": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "title", "status", "dueDate"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles with role assignment"
+    },
+    "/workspaces/{workspaceId}": {
+      "schema": "Workspace",
+      "description": "Agency workspaces containing all business operations"
+    },
+    "/workspaces/{workspaceId}/contacts/{contactId}": {
+      "schema": "CrmContact",
+      "description": "CRM contacts within a workspace"
+    },
+    "/workspaces/{workspaceId}/companies/{companyId}": {
+      "schema": "CrmCompany",
+      "description": "CRM companies within a workspace"
+    },
+    "/workspaces/{workspaceId}/deals/{dealId}": {
+      "schema": "CrmDeal",
+      "description": "Sales deals within a workspace"
+    },
+    "/workspaces/{workspaceId}/quotes/{quoteId}": {
+      "schema": "QuoteProposal",
+      "description": "Agency quotes and proposals"
+    },
+    "/workspaces/{workspaceId}/followUps/{followUpId}": {
+      "schema": "FollowUp",
+      "description": "Commercial follow up tasks"
+    },
+    "/test/{testId}": {
+      "schema": { "$ref": "#/entities/Workspace" },
+      "description": "Connection test document"
+    }
+  }
+}

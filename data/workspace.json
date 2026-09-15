@@ -1,0 +1,2918 @@
+{
+  "currentMember": {
+    "id": "mem_1",
+    "name": "Camila Pinto",
+    "email": "camila@pixel12.agency",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    "role": "Owner",
+    "title": "Directora de Estrategia & CEO",
+    "status": "active"
+  },
+  "workspaceSettings": {
+    "workspaceName": "Pixel 12 Agency OS",
+    "agencyType": "Agencia de Marketing Digital & Asistencia Virtual",
+    "timezone": "America/Guayaquil",
+    "autoDeleteRejectedPosts": true,
+    "defaultApprovalRequired": true,
+    "notifyOnTaskAssignment": true,
+    "notifyOnApprovalNeeded": true,
+    "notifyOnScheduleFailure": true,
+    "aiCredits": 120
+  },
+  "activeBrandId": "brand_pixel12",
+  "brands": [
+    {
+      "id": "brand_pixel12",
+      "name": "Pixel 12",
+      "tagline": "Marketing Digital, Estrategia & Asistencia Virtual de Alto Nivel",
+      "industry": "Marketing Digital & Asistencia Virtual",
+      "category": "Agencia de Marketing & Asistencia Virtual",
+      "description": "Pixel 12 ayuda a empresas y negocios a gestionar profesionalmente su presencia digital, escalar su contenido de alta conversión y optimizar sus operaciones con asistencia virtual especializada.",
+      "services": [
+        "Marketing digital",
+        "Gestión de redes sociales",
+        "Creación y gestión de contenido",
+        "Estrategia digital",
+        "Asistencia virtual",
+        "Automatización de procesos"
+      ],
+      "targetAudience": "Dueños de empresas, directores de operaciones, consultores y PyMEs en crecimiento que buscan delegar con máxima rentabilidad, control y profesionalismo.",
+      "logoUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80",
+      "logoDarkUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80",
+      "logoLightUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80",
+      "faviconUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=64&auto=format&fit=crop&q=80",
+      "typography": {
+        "display": "Outfit",
+        "body": "Plus Jakarta Sans"
+      },
+      "colors": {
+        "primary": "#D4AF37",
+        "secondary": "#CBD5E1",
+        "accent": "#D4AF37",
+        "background": "#09090B",
+        "text": "#FFFFFF",
+        "gold": "#D4AF37",
+        "silver": "#CBD5E1"
+      },
+      "primaryColor": "#D4AF37",
+      "pillars": [
+        "Marketing Digital",
+        "Asistencia Virtual",
+        "Autoridad",
+        "Conversión",
+        "Engagement"
+      ],
+      "voice": {
+        "tone": "Profesional, Estratégico, Cercano, Inteligente, Claro, Moderno, Seguro, Persuasivo, Humano",
+        "personality": [
+          "Estratégico",
+          "Elegante",
+          "Tecnológico",
+          "Resolutivo",
+          "Exclusivo"
+        ],
+        "powerWords": [
+          "Sistemas",
+          "Estrategia",
+          "Conversión",
+          "Automatización",
+          "Productividad",
+          "Crecimiento",
+          "Delegar",
+          "Control"
+        ],
+        "forbiddenWords": [
+          "Hacks milagrosos",
+          "Gratis sin esfuerzo",
+          "Spam",
+          "En el mundo actual"
+        ],
+        "emojisAllowed": true,
+        "preferredCTAs": [
+          "Envíanos un DM para diagnosticar tu presencia digital 📩",
+          "Agenda una sesión estratégica de 20 min con nuestro equipo 🚀",
+          "Comenta \"SISTEMAS\" y te enviamos la guía de delegación por privado 💬",
+          "Guarda este recurso para implementarlo con tu equipo 📌",
+          "Escríbenos \"ASISTENCIA\" para conocer nuestros perfiles operativos ⚡"
+        ],
+        "styleGuidelines": "Hooks directos de alto dolor o rentabilidad en los primeros 2 segundos. Párrafos limpios y espaciados. Cierre con llamada a la acción clara y justificación de ROI."
+      },
+      "isDefault": true
+    },
+    {
+      "id": "brand_soluciones_eco",
+      "name": "EcoHome Sustentable",
+      "tagline": "Energía limpia para hogares inteligentes.",
+      "industry": "Energía Solar y Domótica",
+      "description": "Instalación de paneles solares y eficiencia energética residencial.",
+      "services": [
+        "Paneles solares",
+        "Diagnóstico energético",
+        "Baterías de respaldo"
+      ],
+      "targetAudience": "Familias propietarias de casas interesadas en ahorro de luz y sustentabilidad.",
+      "colors": {
+        "primary": "#10b981",
+        "secondary": "#064e3b",
+        "accent": "#f59e0b"
+      },
+      "voice": {
+        "tone": "Educativo, Confiable y Práctico",
+        "personality": [
+          "Sustentable",
+          "Técnico accesible",
+          "Cálido"
+        ],
+        "powerWords": [
+          "Ahorro",
+          "Independencia energética",
+          "Futuro limpio"
+        ],
+        "forbiddenWords": [
+          "Contaminante",
+          "Complicado"
+        ],
+        "emojisAllowed": true,
+        "preferredCTAs": [
+          "Calcula tu ahorro gratis en el link",
+          "Escríbenos para cotizar"
+        ],
+        "styleGuidelines": "Explicar términos técnicos en lenguaje cotidiano con números reales."
+      }
+    },
+    {
+      "id": "brand_lumina",
+      "name": "Lumina Tech Solutions",
+      "tagline": "Infraestructura Cloud, Automatización e Inteligencia Artificial.",
+      "industry": "Tecnología & Transformación Digital",
+      "description": "Consultoría e implementación de arquitectura cloud empresarial, agentes de IA personalizados y modernización de sistemas legacy.",
+      "services": [
+        "Desarrollo de Software y APIs Cloud Native",
+        "Implementación de Agentes e IA Generativa",
+        "Diagnósticos de Ciberseguridad y Rendimiento",
+        "Modernización de Infraestructura en Google Cloud",
+        "Automatización de Procesos de Negocio (RPA)"
+      ],
+      "targetAudience": "CTOs, Directores de Tecnología y Directores de Operaciones de empresas en crecimiento en América Latina.",
+      "colors": {
+        "primary": "#0F172A",
+        "secondary": "#1E293B",
+        "accent": "#06B6D4"
+      },
+      "voice": {
+        "tone": "Innovador, Técnico de Vanguardia, Confiable y Ejecutivo",
+        "personality": [
+          "Experto",
+          "Metódico",
+          "Visionario",
+          "Preciso"
+        ],
+        "powerWords": [
+          "Cloud Native",
+          "Automatización",
+          "Escalabilidad",
+          "Agentes IA",
+          "Rendimiento",
+          "Latencia"
+        ],
+        "forbiddenWords": [
+          "Improvisado",
+          "Sin métricas",
+          "Inseguro"
+        ],
+        "emojisAllowed": true,
+        "preferredCTAs": [
+          "Agenda una sesión de diagnóstico cloud para tu empresa 🚀",
+          "Descarga el whitepaper de arquitectura de agentes de IA 📑",
+          "Escríbenos para modernizar tus sistemas legacy ⚡"
+        ],
+        "styleGuidelines": "Aperturas concisas con impacto tecnológico. Respaldar propuestas con métricas de rendimiento y reducción de costos operativos."
+      }
+    }
+  ],
+  "members": [
+    {
+      "id": "mem_1",
+      "name": "Camila Pinto",
+      "email": "camila@pixel12.agency",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "role": "Owner",
+      "title": "Directora de Estrategia",
+      "status": "active"
+    },
+    {
+      "id": "mem_2",
+      "name": "Carlos Mendoza",
+      "email": "carlos@pixel12.agency",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "role": "Admin",
+      "title": "Director Creativo & Aprobador",
+      "status": "active"
+    },
+    {
+      "id": "mem_3",
+      "name": "Valentina Ríos",
+      "email": "valentina@pixel12.agency",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+      "role": "Copywriter",
+      "title": "Senior Copywriter & AI Specialist",
+      "status": "active"
+    },
+    {
+      "id": "mem_4",
+      "name": "Mateo Silva",
+      "email": "mateo@pixel12.agency",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "role": "Designer",
+      "title": "Lead Motion & Visual Designer",
+      "status": "active"
+    },
+    {
+      "id": "mem_5",
+      "name": "Sofía Arboleda",
+      "email": "sofia@pixel12.agency",
+      "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+      "role": "Community Manager",
+      "title": "Community Manager & Programación",
+      "status": "active"
+    },
+    {
+      "id": "mem_alejandro",
+      "name": "Alejandro Morales",
+      "email": "alejandro@pixel12.agency",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80",
+      "role": "Manager",
+      "title": "Head of Growth & Asistencia Virtual",
+      "status": "active"
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "camp_1",
+      "brandId": "brand_pixel12",
+      "name": "Campaña Captación PyMEs Septiembre 2026",
+      "objective": "Generar 40 leads calificados para servicios de marketing y asistencia virtual.",
+      "description": "Mix de reels educativos sobre delegación y carruseles desmitificando el costo de una agencia.",
+      "startDate": "2026-09-01",
+      "endDate": "2026-09-30",
+      "audience": "PyMEs de servicios, consultores y directores de operaciones en Latam.",
+      "budget": 1200,
+      "platforms": [
+        "instagram",
+        "linkedin",
+        "facebook"
+      ],
+      "status": "ACTIVE",
+      "postIds": [
+        "post_1",
+        "post_2",
+        "post_3"
+      ],
+      "taskIds": [
+        "task_1",
+        "task_2",
+        "task_3",
+        "task_4"
+      ],
+      "memberIds": [
+        "mem_1",
+        "mem_2",
+        "mem_3",
+        "mem_4",
+        "mem_5"
+      ]
+    },
+    {
+      "id": "camp_2",
+      "brandId": "brand_pixel12",
+      "name": "Lanzamiento Asistencia Virtual 2.0",
+      "objective": "Posicionar el servicio de asistentes virtuales con IA para soporte y ventas.",
+      "description": "Campañas de autoridad y casos de éxito reales.",
+      "startDate": "2026-09-15",
+      "endDate": "2026-10-15",
+      "audience": "Emprendedores saturados de tareas operativas.",
+      "budget": 800,
+      "platforms": [
+        "linkedin",
+        "instagram"
+      ],
+      "status": "PLANNING",
+      "postIds": [],
+      "taskIds": [],
+      "memberIds": [
+        "mem_1",
+        "mem_3"
+      ]
+    }
+  ],
+  "posts": [
+    {
+      "id": "post_1",
+      "brandId": "brand_pixel12",
+      "internalTitle": "5 tareas repetitivas que deberías delegar a una asistente virtual hoy",
+      "date": "2026-09-04",
+      "time": "11:00",
+      "platforms": [
+        "instagram",
+        "linkedin",
+        "facebook"
+      ],
+      "format": "Carousel",
+      "pillar": "Educativo",
+      "theme": "Delegación y Productividad con Asistencia Virtual",
+      "objective": "Educar a dueños de negocio sobre el tiempo que pierden en micro-tareas administrativas.",
+      "hook": "Si sigues respondiendo correos a las 11:00 PM, no tienes un negocio: tienes un empleo agotador.",
+      "caption": "El error número 1 del fundador es creer que \"ahorra dinero\" haciendo todo por su cuenta.\n\nAquí tienes las 5 tareas operativas que una asistente virtual de Pixel 12 puede asumir desde el día uno:\n\n1️⃣ Filtrado de inbox y agendamiento de reuniones.\n2️⃣ Emisión y seguimiento de cobranzas.\n3️⃣ Atención inicial de DMs y WhatsApp comercial.\n4️⃣ Carga de datos y reportes semanales en CRM.\n5️⃣ Preparación de presentaciones y cotizaciones.\n\nDelegar no es un gasto: es la única forma de comprar tiempo para vender más.\n\n¿Cuál de estas 5 es tu mayor dolor de cabeza hoy?",
+      "cta": "Comenta \"DELEGAR\" o escríbenos por DM y te enviamos nuestra guía de integración operativa de 48h 🚀",
+      "hashtags": [
+        "#Pixel12",
+        "#AsistenciaVirtual",
+        "#ProductividadPyME",
+        "#Delegar",
+        "#EmprendimientoLatam"
+      ],
+      "visualText": "Desliza para ver las 5 tareas que te están robando 15 horas a la semana 👉",
+      "visualDescription": "Carrusel de 6 diapositivas estilo editorial moderno con fondo oscuro/azul petróleo, tipografía blanca bold y acentos en naranja Pixel 12.",
+      "imagePrompt": "Modern minimalist carousel slide layout for digital marketing agency, slate blue background, crisp typography, professional productivity icons, high contrast.",
+      "imageUrl": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80",
+      "status": "APPROVED",
+      "assigneeId": "mem_4",
+      "assigneeName": "Mateo Silva",
+      "campaignId": "camp_1",
+      "campaignName": "Campaña Captación PyMEs Septiembre 2026",
+      "relatedTaskIds": [
+        "task_1",
+        "task_2"
+      ],
+      "approvalHistory": [
+        {
+          "id": "appr_1",
+          "reviewerId": "mem_2",
+          "reviewerName": "Carlos Mendoza",
+          "action": "APPROVED",
+          "comment": "Excelente estructura y el hook está muy potente. Proceder a programación.",
+          "timestamp": "2026-09-02T14:30:00Z"
+        }
+      ],
+      "versions": [
+        {
+          "version": 1,
+          "timestamp": "2026-09-01T10:00:00Z",
+          "authorName": "Valentina Ríos",
+          "changesSummary": "Borrador inicial generado por IA y refinado con voz de marca",
+          "caption": "Versión inicial de caption...",
+          "hook": "Si respondes correos tarde...",
+          "cta": "Comenta DELEGAR"
+        }
+      ],
+      "platformAdapitations": {
+        "instagram": {
+          "platform": "instagram",
+          "caption": "El error número 1 del fundador es creer que \"ahorra dinero\" haciéndolo todo solo... Desliza 👉",
+          "hook": "Si sigues respondiendo correos a las 11:00 PM, tu negocio te está absorbiendo.",
+          "cta": "Comenta DELEGAR para enviarte el checklist por DM 📩",
+          "hashtags": [
+            "#Pixel12",
+            "#AsistenciaVirtual",
+            "#PyME",
+            "#Productividad"
+          ]
+        },
+        "linkedin": {
+          "platform": "linkedin",
+          "caption": "La rentabilidad de un director ejecutivo disminuye cada vez que dedica 2 horas diarias al filtrado manual de bandeja de entrada y agenda.",
+          "hook": "El costo oculto de la micro-operación en empresas en crecimiento.",
+          "cta": "¿Cómo estructura tu equipo el soporte administrativo? Conversemos en comentarios o por mensaje directo.",
+          "hashtags": [
+            "#Operaciones",
+            "#Liderazgo",
+            "#Productividad",
+            "#Pixel12"
+          ]
+        },
+        "facebook": {
+          "platform": "facebook",
+          "caption": "¿Sientes que el día no te alcanza para atender clientes y hacer crecer tu negocio? Descubre las 5 tareas clave que puedes delegar hoy mismo.",
+          "hook": "Recupera hasta 15 horas a la semana con soporte virtual calificado.",
+          "cta": "Envíanos un mensaje y te asesoramos paso a paso.",
+          "hashtags": [
+            "#Pixel12",
+            "#Negocios"
+          ]
+        },
+        "youtube": {
+          "platform": "youtube",
+          "caption": "5 tareas administrativas que puedes delegar a una asistente virtual.",
+          "hook": "Deja de perder tiempo en microtareas.",
+          "cta": "Suscríbete al canal y descarga el recurso gratuito en la descripción.",
+          "hashtags": [
+            "#Productividad",
+            "#Pixel12"
+          ]
+        },
+        "tiktok": {
+          "platform": "tiktok",
+          "caption": "POV: Descubres que no necesitas contratar 3 empleados para ordenar tu negocio.",
+          "hook": "POV: Trabajas 14 horas al día hasta que delegas esto.",
+          "cta": "Link en bio para sesión estratégica gratis 🔥",
+          "hashtags": [
+            "#trabajo",
+            "#emprendedores",
+            "#pixel12"
+          ]
+        }
+      },
+      "createdAt": "2026-09-01T09:00:00Z",
+      "updatedAt": "2026-09-02T14:30:00Z"
+    },
+    {
+      "id": "post_2",
+      "brandId": "brand_pixel12",
+      "internalTitle": "Reel: Por qué tus anuncios en Meta no venden (y cómo arreglarlo)",
+      "date": "2026-09-07",
+      "time": "18:30",
+      "platforms": [
+        "instagram",
+        "facebook",
+        "tiktok"
+      ],
+      "format": "Reel",
+      "pillar": "Autoridad",
+      "theme": "Optimización de Pauta en Meta Ads",
+      "objective": "Demostrar autoridad en pauta digital y captar prospectos de diagnóstico estratégico gratuito.",
+      "hook": "El 80% de las PyMEs apaga sus campañas en Meta diciendo que \"los anuncios no sirven\". Aquí el porqué real.",
+      "caption": "No es el algoritmo. No es tu presupuesto de $10 al día.\n\nEs que estás cometiendo alguno de estos 3 fallos:\n\n1. Estás enviando tráfico frío directo a una página que tarda 8 segundos en cargar.\n2. Tu video empieza con el logo de tu empresa en vez de un hook de dolor.\n3. Tu oferta no es irresistible: pides matrimonio en la primera cita.\n\nEn Pixel 12 diagnosticamos campañas cada semana y el 90% se soluciona ajustando el gancho de los primeros 3 segundos y mejorando la fricción de WhatsApp.",
+      "cta": "Escríbenos \"DIAGNOSTICO\" y revisamos tus campañas actuales sin costo ⚡",
+      "hashtags": [
+        "#MetaAds",
+        "#MarketingDigital",
+        "#Pixel12",
+        "#VentasOnline",
+        "#PublicidadDigital"
+      ],
+      "script": "00:00-00:03: [Texto en pantalla gigante: \"Tu pauta en Meta no funciona por esto\"] - mirada a cámara directa.\n00:03-00:15: [B-Roll de pantalla de Administrador de Anuncios con métricas rojas]: \"Apagas la campaña a los 3 días porque nadie compra...\"\n00:15-00:35: [Corte rápido con texto]: \"Punto 1: tu web es lenta. Punto 2: tu hook aburre. Punto 3: no tienes un CTA claro.\"\n00:35-00:45: [Aparece logo Pixel 12 sutil en esquina inferior]: \"Comenta DIAGNOSTICO y revisamos tu embudo gratis.\"",
+      "imagePrompt": "Professional high-contrast Reel cover frame, bold typography \"POR QUÉ TU PUBLICIDAD NO VENDE\", dark navy theme with orange neon accent, clean lighting.",
+      "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80",
+      "status": "IN_REVIEW",
+      "assigneeId": "mem_3",
+      "assigneeName": "Valentina Ríos",
+      "campaignId": "camp_1",
+      "campaignName": "Campaña Captación PyMEs Septiembre 2026",
+      "relatedTaskIds": [
+        "task_3"
+      ],
+      "approvalHistory": [
+        {
+          "id": "appr_2",
+          "reviewerId": "mem_3",
+          "reviewerName": "Valentina Ríos",
+          "action": "SUBMITTED",
+          "comment": "Guion y caption terminados. Listo para revisión de Carlos.",
+          "timestamp": "2026-09-03T09:15:00Z"
+        }
+      ],
+      "versions": [],
+      "createdAt": "2026-09-02T11:00:00Z",
+      "updatedAt": "2026-09-03T09:15:00Z"
+    },
+    {
+      "id": "post_3",
+      "brandId": "brand_pixel12",
+      "internalTitle": "Post Estático: Caso de Éxito Clínica Dental +140% Citas",
+      "date": "2026-09-10",
+      "time": "15:00",
+      "platforms": [
+        "instagram",
+        "linkedin"
+      ],
+      "format": "Static Post",
+      "pillar": "Venta",
+      "theme": "Casos de éxito y testimonios Pixel 12",
+      "objective": "Prueba social tangible y conversión directa.",
+      "hook": "De 12 citas al mes a tener la agenda llena con 3 semanas de anticipación.",
+      "caption": "Cuando el Dr. Sánchez llegó a Pixel 12, dependía 100% de recomendaciones boca a boca.\n\nImplementamos un sistema de 3 partes:\n1. Contenido en Reels desmitificando tratamientos de ortodoncia invisible.\n2. Campañas geolocalizadas a 5 km de la clínica.\n3. Asistente virtual en WhatsApp respondiendo en menos de 90 segundos.\n\nResultado en 60 días: +140% citas agendadas y tasa de asistencia del 92%.\n\nEl marketing digital no tiene que ser complejo: tiene que estar integrado.",
+      "cta": "¿Quieres replicar este sistema en tu negocio de servicios? Agenda una llamada en el link de la bio 📈",
+      "hashtags": [
+        "#CasoDeExito",
+        "#Pixel12",
+        "#CrecimientoEmpresarial",
+        "#MarketingDeServicios"
+      ],
+      "visualText": "+140% Citas en 60 Días · Sistema Pixel 12",
+      "visualDescription": "Gráfico limpio de crecimiento con tarjeta de testimonio verificada, estilo Linear/Notion minimalista con acento azul.",
+      "imageUrl": "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&auto=format&fit=crop&q=80",
+      "status": "DRAFT",
+      "assigneeId": "mem_4",
+      "assigneeName": "Mateo Silva",
+      "campaignId": "camp_1",
+      "campaignName": "Campaña Captación PyMEs Septiembre 2026",
+      "relatedTaskIds": [
+        "task_4"
+      ],
+      "approvalHistory": [],
+      "versions": [],
+      "createdAt": "2026-09-02T16:00:00Z",
+      "updatedAt": "2026-09-02T16:00:00Z"
+    },
+    {
+      "id": "post_4",
+      "brandId": "brand_pixel12",
+      "internalTitle": "Carrusel: El mapa del embudo de ventas que toda PyME necesita en 2026",
+      "date": "2026-09-15",
+      "time": "10:00",
+      "platforms": [
+        "instagram",
+        "linkedin",
+        "facebook"
+      ],
+      "format": "Carousel",
+      "pillar": "Educativo",
+      "theme": "Embudo de Ventas Digital",
+      "objective": "Generar guardados y compartidos masivos educando sobre el embudo.",
+      "hook": "Deja de publicar al azar esperando que caigan ventas mágicas.",
+      "caption": "Tener redes sociales sin un embudo es como abrir una tienda en el desierto.\n\nEste es el mapa exacto de 4 etapas que usamos en Pixel 12 para nuestros clientes:\n\n1. ATRACCIÓN: Reels y TikToks de dolor/gancho.\n2. NUTRICIÓN: Carruseles educativos y newsletters.\n3. CONVERSIÓN: Ofertas directas a WhatsApp / llamadas.\n4. RETENCIÓN: Seguimiento automatizado y soporte impecable.\n\nGuarda este carrusel para consultarlo cada vez que planifiques tu mes.",
+      "cta": "Guarda este post y compártelo con tu socio 📌",
+      "hashtags": [
+        "#EmbudoDeVentas",
+        "#Pixel12",
+        "#EstrategiaDigital"
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80",
+      "status": "SCHEDULED",
+      "assigneeId": "mem_5",
+      "assigneeName": "Sofía Arboleda",
+      "relatedTaskIds": [],
+      "approvalHistory": [
+        {
+          "id": "appr_4",
+          "reviewerId": "mem_2",
+          "reviewerName": "Carlos Mendoza",
+          "action": "APPROVED",
+          "comment": "Listo y programado en el scheduler de Pixel 12.",
+          "timestamp": "2026-09-01T17:00:00Z"
+        }
+      ],
+      "versions": [],
+      "createdAt": "2026-09-01T12:00:00Z",
+      "updatedAt": "2026-09-01T17:00:00Z"
+    },
+    {
+      "id": "post_matrix_1",
+      "brandId": "brand_pixel12",
+      "internalTitle": "Carrusel: 4 Pasos para automatizar la captación de leads en WhatsApp sin perder el toque humano",
+      "date": "2026-09-08",
+      "time": "10:30",
+      "platforms": [
+        "instagram",
+        "linkedin"
+      ],
+      "format": "Carousel",
+      "pillar": "Marketing Digital",
+      "theme": "Sistemas de Conversión & Automatización",
+      "objective": "Educar a dueños de negocio sobre cómo combinar pauta digital, bots inteligentes y atención humana.",
+      "hook": "El 73% de los prospectos en WhatsApp compran al negocio que responde en menos de 5 minutos.",
+      "caption": "Responder tarde a un prospecto calificado es literalmente regalarle dinero a tu competencia.\n\nEn Pixel 12 implementamos una arquitectura en 4 capas para nuestros clientes:\n\n1️⃣ Cualificación instantánea con disparadores inteligentes.\n2️⃣ Derivación prioritaria por valor estimado de cliente.\n3️⃣ Integración nativa con CRM y Google Sheets.\n4️⃣ Asistente virtual humana que cierra la llamada o venta.\n\nAutomatizar no significa sonar como un robot: significa garantizar velocidad y experiencia prémium.",
+      "cta": "Comenta \"SISTEMA\" y te enviamos el diagrama del embudo por mensaje directo 🚀",
+      "hashtags": [
+        "#Pixel12",
+        "#MarketingDigital",
+        "#Automatizacion",
+        "#GrowthHacking",
+        "#VentasB2B"
+      ],
+      "visualDescription": "Carrusel prémium estilo Pixel 12 (fondo negro obsidiana, acentos dorados y plateados, tipografía bold)",
+      "status": "DRAFT",
+      "sourceFromMatrix": true,
+      "hasGeneratedDesign": false,
+      "assigneeId": "mem_alejandro",
+      "assigneeName": "Alejandro Morales",
+      "approvalHistory": [],
+      "versions": [],
+      "relatedTaskIds": [],
+      "createdAt": "2026-09-03T10:00:00Z",
+      "updatedAt": "2026-09-03T10:00:00Z"
+    },
+    {
+      "id": "post_matrix_2",
+      "brandId": "brand_pixel12",
+      "internalTitle": "Post Estático: Caso de Éxito Consultora B2B +$28,000 con Asistencia Virtual Especializada",
+      "date": "2026-09-18",
+      "time": "17:00",
+      "platforms": [
+        "linkedin",
+        "instagram"
+      ],
+      "format": "Static Post",
+      "pillar": "Autoridad",
+      "theme": "Caso de Éxito Pixel 12 Asistencia",
+      "objective": "Demostrar el impacto medible en facturación y ahorro de horas al integrar una asistente virtual de Pixel 12.",
+      "hook": "El fundador trabajaba 14 horas al día. Le asignamos una Asistente Virtual Pixel 12 y esto pasó en 60 días.",
+      "caption": "El mayor freno de crecimiento en empresas de servicios no es la falta de ventas: es el cuello de botella operativo del fundador.\n\nCaso Real con cliente B2B:\n• Tareas delegadas: Gestión de agenda, follow-ups de propuestas, emisión de facturas y soporte VIP.\n• Horas liberadas al fundador: 18 horas semanales.\n• Impacto en ventas: +$28,000 en nuevos contratos cerrados gracias al tiempo enfocado en prospección.\n\nDelegar no es un gasto: es el multiplicador más rentable de tu negocio.",
+      "cta": "Agenda una llamada de evaluación de 15 minutos en el enlace de la bio ⚡",
+      "hashtags": [
+        "#Pixel12",
+        "#AsistenciaVirtual",
+        "#Productividad",
+        "#EscalarNegocio",
+        "#CasosDeExito"
+      ],
+      "visualDescription": "Gráfico ejecutivo de alta gama con contrastes en negro y dorado",
+      "status": "DRAFT",
+      "sourceFromMatrix": true,
+      "hasGeneratedDesign": false,
+      "assigneeId": "mem_alejandro",
+      "assigneeName": "Alejandro Morales",
+      "approvalHistory": [],
+      "versions": [],
+      "relatedTaskIds": [],
+      "createdAt": "2026-09-03T11:00:00Z",
+      "updatedAt": "2026-09-03T11:00:00Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_1",
+      "brandId": "brand_pixel12",
+      "title": "Diseñar carrusel 6 slides: 5 tareas para delegar",
+      "description": "Crear el diseño visual para el post del 4 de septiembre. Respetar paleta azul y naranja, contraste alto y legibilidad en mobile.",
+      "assigneeId": "mem_4",
+      "assigneeName": "Mateo Silva",
+      "creatorId": "mem_1",
+      "creatorName": "Camila Pinto",
+      "priority": "HIGH",
+      "startDate": "2026-09-02",
+      "deadlineDate": "2026-09-03",
+      "deadlineTime": "14:00",
+      "status": "COMPLETED",
+      "tags": [
+        "Diseño",
+        "Carrusel",
+        "Instagram"
+      ],
+      "checklist": [
+        {
+          "id": "chk_1",
+          "text": "Portada con gancho grande",
+          "completed": true
+        },
+        {
+          "id": "chk_2",
+          "text": "5 slides de contenido con iconos",
+          "completed": true
+        },
+        {
+          "id": "chk_3",
+          "text": "Slide final con CTA de Pixel 12",
+          "completed": true
+        },
+        {
+          "id": "chk_4",
+          "text": "Exportar en 1080x1350 PNG",
+          "completed": true
+        }
+      ],
+      "comments": [
+        {
+          "id": "com_1",
+          "authorId": "mem_4",
+          "authorName": "Mateo Silva",
+          "text": "Archivos PNG listos y subidos en la publicación.",
+          "timestamp": "2026-09-03T11:00:00Z"
+        }
+      ],
+      "relatedPostId": "post_1",
+      "relatedPostTitle": "5 tareas repetitivas que deberías delegar a una asistente virtual hoy",
+      "relatedCampaignId": "camp_1",
+      "relatedCampaignName": "Campaña Captación PyMEs Septiembre 2026",
+      "history": [
+        {
+          "id": "h_1",
+          "authorName": "Camila Pinto",
+          "action": "Tarea creada",
+          "timestamp": "2026-09-02T10:00:00Z"
+        },
+        {
+          "id": "h_2",
+          "authorName": "Mateo Silva",
+          "action": "Estado cambiado a COMPLETED",
+          "timestamp": "2026-09-03T11:05:00Z"
+        }
+      ],
+      "createdAt": "2026-09-02T10:00:00Z"
+    },
+    {
+      "id": "task_2",
+      "brandId": "brand_pixel12",
+      "title": "Programar post carrusel en Meta Suite y LinkedIn",
+      "description": "Programar la publicación post_1 para el 4 de septiembre a las 11:00 am hora Ecuador (America/Guayaquil).",
+      "assigneeId": "mem_5",
+      "assigneeName": "Sofía Arboleda",
+      "creatorId": "mem_2",
+      "creatorName": "Carlos Mendoza",
+      "priority": "HIGH",
+      "startDate": "2026-09-03",
+      "deadlineDate": "2026-09-04",
+      "deadlineTime": "09:00",
+      "status": "IN_PROGRESS",
+      "tags": [
+        "Programación",
+        "Community Manager"
+      ],
+      "checklist": [
+        {
+          "id": "chk_21",
+          "text": "Revisar hashtags adaptados para LinkedIn",
+          "completed": true
+        },
+        {
+          "id": "chk_22",
+          "text": "Confirmar hora 11:00 AM America/Guayaquil",
+          "completed": false
+        }
+      ],
+      "comments": [],
+      "relatedPostId": "post_1",
+      "relatedPostTitle": "5 tareas repetitivas que deberías delegar a una asistente virtual hoy",
+      "relatedCampaignId": "camp_1",
+      "relatedCampaignName": "Campaña Captación PyMEs Septiembre 2026",
+      "history": [
+        {
+          "id": "h_21",
+          "authorName": "Carlos Mendoza",
+          "action": "Tarea creada",
+          "timestamp": "2026-09-02T15:00:00Z"
+        }
+      ],
+      "createdAt": "2026-09-02T15:00:00Z"
+    },
+    {
+      "id": "task_3",
+      "brandId": "brand_pixel12",
+      "title": "Edición y subtitulado dinámico de Reel Meta Ads",
+      "description": "Montar el guion de Valentina, agregar subtítulos estilo Alex Hormozi y efectos de sonido en puntos clave.",
+      "assigneeId": "mem_4",
+      "assigneeName": "Mateo Silva",
+      "creatorId": "mem_3",
+      "creatorName": "Valentina Ríos",
+      "priority": "MEDIUM",
+      "startDate": "2026-09-03",
+      "deadlineDate": "2026-09-05",
+      "deadlineTime": "17:00",
+      "status": "TODO",
+      "tags": [
+        "Video",
+        "Reel",
+        "Edición"
+      ],
+      "checklist": [
+        {
+          "id": "chk_31",
+          "text": "Subtítulos amarillos/blancos con resaltado",
+          "completed": false
+        },
+        {
+          "id": "chk_32",
+          "text": "B-roll en segundos 3 a 15",
+          "completed": false
+        },
+        {
+          "id": "chk_33",
+          "text": "Audio limpio y música de fondo sutil",
+          "completed": false
+        }
+      ],
+      "comments": [],
+      "relatedPostId": "post_2",
+      "relatedPostTitle": "Reel: Por qué tus anuncios en Meta no venden (y cómo arreglarlo)",
+      "relatedCampaignId": "camp_1",
+      "relatedCampaignName": "Campaña Captación PyMEs Septiembre 2026",
+      "history": [],
+      "createdAt": "2026-09-03T09:30:00Z"
+    },
+    {
+      "id": "task_4",
+      "brandId": "brand_pixel12",
+      "title": "Diseñar gráfica de testimonio Dr. Sánchez",
+      "description": "Preparar arte para el post estático con métricas verificadas de +140% citas.",
+      "assigneeId": "mem_4",
+      "assigneeName": "Mateo Silva",
+      "creatorId": "mem_1",
+      "creatorName": "Camila Pinto",
+      "priority": "MEDIUM",
+      "startDate": "2026-09-05",
+      "deadlineDate": "2026-09-08",
+      "deadlineTime": "12:00",
+      "status": "TODO",
+      "tags": [
+        "Diseño",
+        "Testimonio"
+      ],
+      "checklist": [],
+      "comments": [],
+      "relatedPostId": "post_3",
+      "relatedPostTitle": "Post Estático: Caso de Éxito Clínica Dental +140% Citas",
+      "relatedCampaignId": "camp_1",
+      "relatedCampaignName": "Campaña Captación PyMEs Septiembre 2026",
+      "history": [],
+      "createdAt": "2026-09-02T16:10:00Z"
+    }
+  ],
+  "socialAccounts": [
+    {
+      "id": "soc_ig",
+      "platform": "instagram",
+      "accountName": "Pixel 12 Agencia Digital",
+      "handle": "@pixel12agency",
+      "profilePic": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+      "isConnected": false,
+      "requiresConfig": true,
+      "requiredCredentials": [
+        "Meta App ID",
+        "Meta App Secret",
+        "Instagram Graph API Access Token"
+      ],
+      "missingCredentialsReason": "API credentials required. Para conectar Instagram Business se requiere configurar el Meta App ID y generar el token con permisos instagram_basic y instagram_content_publish."
+    },
+    {
+      "id": "soc_fb",
+      "platform": "facebook",
+      "accountName": "Pixel 12 Marketing Digital",
+      "handle": "pixel12agency",
+      "profilePic": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+      "isConnected": false,
+      "requiresConfig": true,
+      "requiredCredentials": [
+        "Meta Page ID",
+        "Page Access Token (pages_manage_posts)"
+      ],
+      "missingCredentialsReason": "Connect your account. Se requiere Page Access Token de Meta for Developers para publicar directamente en la Fanpage."
+    },
+    {
+      "id": "soc_li",
+      "platform": "linkedin",
+      "accountName": "Pixel 12 Agency",
+      "handle": "company/pixel12",
+      "profilePic": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+      "isConnected": false,
+      "requiresConfig": true,
+      "requiredCredentials": [
+        "LinkedIn Client ID",
+        "Client Secret",
+        "Organization URN ID",
+        "w_member_social scope"
+      ],
+      "missingCredentialsReason": "OAuth 2.0 requerido. Configura tus claves en LinkedIn Developer Portal para habilitar publicación en la página de empresa."
+    },
+    {
+      "id": "soc_yt",
+      "platform": "youtube",
+      "accountName": "Pixel 12 Studio",
+      "handle": "@pixel12studio",
+      "profilePic": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+      "isConnected": false,
+      "requiresConfig": true,
+      "requiredCredentials": [
+        "Google Cloud Client ID",
+        "Client Secret",
+        "youtube.upload OAuth Scope"
+      ],
+      "missingCredentialsReason": "Integration not configured. Conecta tu proyecto de Google Cloud con la YouTube Data API v3 habilitada."
+    },
+    {
+      "id": "soc_tt",
+      "platform": "tiktok",
+      "accountName": "Pixel 12 OS",
+      "handle": "@pixel12os",
+      "profilePic": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+      "isConnected": false,
+      "requiresConfig": true,
+      "requiredCredentials": [
+        "TikTok Open Platform Client Key",
+        "Client Secret",
+        "video.publish scope"
+      ],
+      "missingCredentialsReason": "Credenciales pendientes. Registra tu aplicación en TikTok for Developers para subir videos automáticamente."
+    }
+  ],
+  "googleAds": {
+    "isConnected": false,
+    "currency": "USD",
+    "statusMessage": "Integration not configured. Para conectar Google Ads en producción ingresa tu Developer Token, OAuth Client Secret y Customer ID (10 dígitos). El sistema ya cuenta con la arquitectura de reporte y sincronización.",
+    "campaigns": [
+      {
+        "id": "gads_1",
+        "name": "Search - Asistencia Virtual PyMEs Latam",
+        "status": "PAUSED",
+        "budgetDaily": 25,
+        "impressions": 4200,
+        "clicks": 310,
+        "cpc": 0.82,
+        "conversions": 24,
+        "cost": 254.2
+      },
+      {
+        "id": "gads_2",
+        "name": "Performance Max - Agencia Marketing Digital",
+        "status": "PAUSED",
+        "budgetDaily": 35,
+        "impressions": 12500,
+        "clicks": 580,
+        "cpc": 0.65,
+        "conversions": 41,
+        "cost": 377
+      }
+    ]
+  },
+  "notifications": [
+    {
+      "id": "notif_1",
+      "title": "Publicación en revisión",
+      "message": "Valentina envió a revisión: \"Reel: Por qué tus anuncios en Meta no venden\"",
+      "type": "approval",
+      "read": false,
+      "timestamp": "2026-09-03T09:15:00Z",
+      "linkView": "approvals"
+    },
+    {
+      "id": "notif_2",
+      "title": "Tarea completada",
+      "message": "Mateo completó \"Diseñar carrusel 6 slides: 5 tareas para delegar\"",
+      "type": "task",
+      "read": false,
+      "timestamp": "2026-09-03T11:05:00Z",
+      "linkView": "tasks"
+    },
+    {
+      "id": "notif_3",
+      "title": "Publicación Aprobada",
+      "message": "Carlos aprobó el carrusel para el 4 de septiembre.",
+      "type": "post",
+      "read": true,
+      "timestamp": "2026-09-02T14:30:00Z",
+      "linkView": "calendar"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "log_1",
+      "actorName": "Camila Pinto",
+      "action": "Creó campaña",
+      "entityType": "campaign",
+      "entityId": "camp_1",
+      "details": "Campaña Captación PyMEs Septiembre 2026",
+      "timestamp": "2026-09-01T08:30:00Z"
+    },
+    {
+      "id": "log_2",
+      "actorName": "Carlos Mendoza",
+      "action": "Aprobó publicación",
+      "entityType": "approval",
+      "entityId": "post_1",
+      "details": "Aprobado para programación el 4 de septiembre",
+      "timestamp": "2026-09-02T14:30:00Z"
+    },
+    {
+      "id": "log_3",
+      "actorName": "Mateo Silva",
+      "action": "Completó tarea",
+      "entityType": "task",
+      "entityId": "task_1",
+      "details": "Diseñar carrusel 6 slides",
+      "timestamp": "2026-09-03T11:05:00Z"
+    }
+  ],
+  "blogPosts": [
+    {
+      "id": "blog_1",
+      "brandId": "brand_pixel12",
+      "title": "Sistemas de Asistencia Virtual & Delegación Operativa: Cómo Liberar +15 Horas Semanales sin Perder el Control de tu Empresa",
+      "slug": "sistemas-asistencia-virtual-delegacion-operativa-pymes",
+      "status": "PUBLISHED",
+      "author": "Camila Pinto",
+      "authorRole": "Directora de Estrategia & CEO · Pixel 12",
+      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "category": "Asistencia Virtual & Operaciones",
+      "sourceType": "topic",
+      "publishedAt": "2026-09-04T10:00:00Z",
+      "createdAt": "2026-09-03T15:30:00Z",
+      "updatedAt": "2026-09-04T09:45:00Z",
+      "coverImage": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1200&auto=format&fit=crop&q=80",
+      "excerpt": "Descubre la metodología paso a paso para diagnosticar cuellos de botella operativos, estandarizar manuales de procesos y delegar con asistentes virtuales calificadas bajo el estándar Pixel 12.",
+      "contentMarkdown": "## Introducción: La trampa del fundador todoterreno en 2026\n\nEn el desarrollo de empresas y servicios profesionales en Latinoamérica y el mercado hispanohablante, más del 80% de los fundadores y directores pasan entre 12 y 20 horas semanales atrapados en microgestión: respondiendo mensajes directos, coordinando agendas, emitiendo facturas o persiguiendo entregables.\n\nTrabajar 65 horas a la semana no es escalar: es convertirte en el empleado más sobrecargado y mal pagado de tu propia compañía.\n\nEn **Pixel 12**, tras diagnosticar y acompañar la delegación en decenas de empresas y agencias, comprobamos que implementar un sistema estructurado de **Asistencia Virtual Calificada** permite recuperar de inmediato entre **15 y 22 horas semanales**, manteniendo una precisión operativa del 99% mediante protocolos claros y KPIs medibles.\n\n---\n\n## 1. Diagnóstico de Cuellos de Botella: La Matriz de Transferencia Operativa\n\nEl primer error común al intentar delegar es contratar sin definir los límites de decisión. Un asistente virtual no puede leer la mente de un fundador; necesita una arquitectura de procesos repetibles.\n\n```txt\nMatriz de Clasificación Pixel 12:\n- Cuadrante 1: Tareas de Alto Volumen y Baja Complejidad (Delegación Inmediata)\n  * Gestión de inbox y triaje de DMs en Instagram / LinkedIn\n  * Agendamiento de llamadas y confirmación de asistencia en Google Calendar\n  * Carga y formateo de propuestas comerciales estándar\n- Cuadrante 2: Tareas de Alto Impacto y Especialización (Supervisión con SOP)\n  * Publicación y programación de contenido en redes sociales\n  * Seguimiento de prospectos calificados en CRM\n  * Reportes semanales de métricas y rendimiento\n- Cuadrante 3: Núcleo Estratégico (Exclusivo del Fundador)\n  * Negociaciones de alto ticket y alianzas clave\n  * Dirección estratégica y cultura de marca\n```\n\n---\n\n## 2. Comparativa Real: Operación No Delegada vs. Sistema Pixel 12\n\nA continuación mostramos el impacto medido en un cliente de consultoría B2B tras 60 días de onboarding con una Asistente Virtual dedicada de Pixel 12:\n\n| Indicador de Gestión | Operación Tradicional (Fundador Operando) | Con Asistencia Virtual Pixel 12 | Impacto Medible |\n| :--- | :--- | :--- | :--- |\n| **Tiempo semanal en tareas administrativas** | 22 horas / semana | 3.5 horas / semana | **-84% tiempo perdido** |\n| **Velocidad de respuesta a leads en redes** | 4.8 horas promedio | < 12 minutos en horario laboral | **+310% conversión inicial** |\n| **Consistencia de publicación en redes** | Intermitente (1-2 posts/semana) | 4 publicaciones programadas/semana | **100% cumplimiento de calendario** |\n| **Capacidad de captación de nuevos clientes** | Estancada por falta de tiempo | +6 llamadas comerciales/semana | **+42% facturación neta** |\n\nEl ahorro de **18.5 horas semanales** permite al líder del negocio concentrarse en cerrar ventas, perfeccionar la entrega de sus servicios y desarrollar nuevos canales comerciales.\n\n---\n\n## 3. Protocolo de Onboarding en 48 Horas: El Estándar Pixel 12\n\nPara garantizar que la transición sea fluida y sin fricción operativa:\n\n1. **Documentación de Procesos (SOPs):** Creación de videos explicativos breves (Loom/Tango) de cada tarea crítica.\n2. **Acceso Seguro y Gestionado:** Uso de gestores de contraseñas seguros (Bitwarden/1Password) sin compartir credenciales maestras.\n3. **Canal Centralizado de Comunicación:** Sincronización en Slack o WhatsApp Business con resumen diario de entregables al cierre de jornada.\n\n---\n\n## Preguntas Frecuentes (FAQ)\n\n### ¿Cuánto tiempo toma ver resultados con una asistente virtual de Pixel 12?\nDesde la primera semana operativa. Nuestro proceso incluye una inducción previa para que la asistente virtual comience a ejecutar tareas recurrentes desde el día uno con supervisión continua de nuestro equipo directivo.\n\n### ¿Qué habilidades específicas tienen los perfiles de Pixel 12?\nDominan gestión de redes sociales, atención al cliente, redacción comercial con IA supervisada, manejo de suites de productividad (Google Workspace, Notion, Airtable, CRM) y coordinación logística.",
+      "seo": {
+        "metaTitle": "Sistemas de Asistencia Virtual & Delegación | Pixel 12",
+        "metaDescription": "Aprende a delegar tareas operativas, liberar +15 horas semanales y escalar tu empresa con la metodología probada de Asistencia Virtual de Pixel 12.",
+        "focusKeyword": "asistencia virtual para empresas",
+        "secondaryKeywords": [
+          "delegar tareas operativas",
+          "productividad para directores",
+          "asistente virtual calificada",
+          "Pixel 12 asistencia"
+        ],
+        "readingTime": "6 min de lectura",
+        "wordCount": 1780,
+        "score": 96,
+        "checklist": [
+          {
+            "label": "Palabra clave en el H1",
+            "passed": true,
+            "tip": "La focus keyword aparece en el titular principal"
+          },
+          {
+            "label": "Meta Descripción optimizada (152 caracteres)",
+            "passed": true,
+            "tip": "Longitud ideal para snippets de Google"
+          },
+          {
+            "label": "Subencabezados H2 estructurados con variantes",
+            "passed": true,
+            "tip": "Excelente jerarquía visual y semántica"
+          },
+          {
+            "label": "Tablas comparativas con datos reales de negocio",
+            "passed": true,
+            "tip": "Alto valor y retención de lectura"
+          },
+          {
+            "label": "CTA orientado a llamada estratégica",
+            "passed": true,
+            "tip": "Conversión directa a servicios Pixel 12"
+          }
+        ]
+      },
+      "faqs": [
+        {
+          "question": "¿Cuánto tiempo toma ver resultados con una asistente virtual de Pixel 12?",
+          "answer": "Desde la primera semana operativa. Nuestro proceso incluye una inducción previa para que la asistente comience a ejecutar tareas con supervisión desde el día uno."
+        },
+        {
+          "question": "¿Qué habilidades específicas tienen los perfiles de Pixel 12?",
+          "answer": "Dominio de redes sociales, atención de leads, redacción profesional, gestión de correo, Notion, Google Workspace y CRMs comerciales."
+        }
+      ],
+      "repurposed": {
+        "carousel": [
+          {
+            "slideNumber": 1,
+            "slideType": "cover",
+            "tag": "PIXEL 12 · ASISTENCIA VIRTUAL",
+            "headline": "Cómo liberar +15 horas a la semana delegando con asistentes virtuales",
+            "subtitle": "El sistema en 3 pasos para fundadores que quieren escalar sin agotarse",
+            "showAuthorBadge": true,
+            "authorBadgeName": "Camila Pinto",
+            "authorBadgeTitle": "CEO & Directora de Estrategia · Pixel 12",
+            "showOfficialLogo": true,
+            "visualDescription": "Fondo negro obsidiana (#09090B) con detalles dorados (#D4AF37), tipografía editorial limpia y logotipo Pixel 12 en la esquina superior.",
+            "accentColor": "#D4AF37"
+          },
+          {
+            "slideNumber": 2,
+            "slideType": "problem",
+            "tag": "EL CUELLO DE BOTELLA",
+            "headline": "El 80% de los directores son el empleado más sobrecargado de su empresa",
+            "subtitle": "¿Por qué sigues respondiendo DMs y cuadrando calendarios manualmente?",
+            "bodyPoints": [
+              "Más de 18 horas semanales perdidas en tareas de bajo valor",
+              "Pérdida de clientes potenciales por tardar 4 horas en responder",
+              "Cero tiempo para diseñar la estrategia comercial del próximo trimestre"
+            ],
+            "showOfficialLogo": true,
+            "accentColor": "#ef4444"
+          },
+          {
+            "slideNumber": 3,
+            "slideType": "solution",
+            "tag": "EL SISTEMA PIXEL 12",
+            "headline": "La arquitectura en 3 capas de delegación estratégica",
+            "subtitle": "Estandariza una vez, recupera tu tiempo para siempre",
+            "bodyPoints": [
+              "1. Triaje de bandeja y DMs con plantillas aprobadas",
+              "2. Asistente virtual calificada sincronizada con tu agenda y CRM",
+              "3. Supervisión diaria con reportes de avance al cierre de jornada"
+            ],
+            "showOfficialLogo": true,
+            "accentColor": "#D4AF37"
+          },
+          {
+            "slideNumber": 4,
+            "slideType": "case_study",
+            "tag": "RESULTADOS MEDIBLES",
+            "headline": "Caso real: De 22 horas a 3.5 horas de carga operativa",
+            "subtitle": "Impacto medido en 60 días de onboarding continuo",
+            "metricNumber": "-84%",
+            "metricLabel": "Reducción en tiempo dedicado a tareas administrativas",
+            "bodyPoints": [
+              "Velocidad de respuesta a prospectos bajó de 4.8h a menos de 12 minutos",
+              "6 llamadas comerciales adicionales agendadas cada semana",
+              "+42% de incremento en facturación neta"
+            ],
+            "showOfficialLogo": true,
+            "accentColor": "#10b981"
+          },
+          {
+            "slideNumber": 5,
+            "slideType": "cta",
+            "tag": "SIGUIENTE PASO",
+            "headline": "¿Listo para delegar tu operación con el equipo de Pixel 12?",
+            "subtitle": "Comenta \"DELEGAR\" y te enviamos la lista de 25 tareas transferibles de inmediato",
+            "bodyPoints": [
+              "Diagnóstico gratuito de cuellos de botella para tu empresa",
+              "Asignación de perfil calificado en menos de 48 horas",
+              "Garantía total de calidad supervisada por nuestra dirección"
+            ],
+            "showAuthorBadge": true,
+            "authorBadgeName": "Camila Pinto · Pixel 12",
+            "authorBadgeTitle": "Especialista en Sistemas y Asistencia Virtual",
+            "showOfficialLogo": true,
+            "accentColor": "#D4AF37"
+          }
+        ],
+        "reelScript": [
+          {
+            "secondRange": "0:00 - 0:04",
+            "shotType": "Plano Medio Frontal",
+            "visualDirection": "Camila en entorno corporativo elegante con laptop y café. Texto grande dorado en pantalla: \"¡Deja de perder 15 horas a la semana!\"",
+            "voiceover": "Si sigues respondiendo DMs a las diez de la noche y coordinando agendas a mano, no tienes una empresa: tienes un empleo agotador."
+          },
+          {
+            "secondRange": "0:05 - 0:18",
+            "shotType": "Captura Dinámica de Pantalla",
+            "visualDirection": "Transición a Notion con el panel de tareas operativas de Pixel 12. Se resalta la matriz de tareas transferibles en 48 horas.",
+            "voiceover": "En Pixel 12 implementamos asistentes virtuales entrenadas que gestionan tus mensajes, organizan tus llamadas y mantienen tu CRM actualizado mientras tú te enfocas en vender."
+          },
+          {
+            "secondRange": "0:19 - 0:42",
+            "shotType": "Gráfico Comparativo en Negro y Oro",
+            "visualDirection": "Gráfica minimalista con números de impacto: -84% de carga operativa y respuesta a clientes en menos de 12 minutos.",
+            "voiceover": "Nuestros clientes reducen hasta un 84% su tiempo operativo desde el primer mes. Imagina recuperar casi 20 horas cada semana para liderar tu negocio."
+          },
+          {
+            "secondRange": "0:43 - 0:60",
+            "shotType": "Plano Cercano con Sonrisa y Confianza",
+            "visualDirection": "Camila mirando a cámara con el logo de Pixel 12. Aparece la palabra \"DELEGAR\" en tipografía dorada brillante.",
+            "voiceover": "Comenta la palabra \"DELEGAR\" aquí abajo y te enviamos la guía exclusiva con las 25 tareas que debes transferir esta misma semana. ¡Hagamos crecer tu marca!"
+          }
+        ],
+        "stories": [
+          {
+            "slideNumber": 1,
+            "headline": "¿Cuántas horas dedicas a tareas operativas?",
+            "text": "Pregunta sincera para dueños de negocio: ¿sientes que el día no te alcanza?",
+            "stickerIdea": "Encuesta: \"Menos de 5h\" vs \"Más de 15h 🤯\"",
+            "cta": "Vota en la encuesta"
+          },
+          {
+            "slideNumber": 2,
+            "headline": "Dato revelador 💡",
+            "text": "El costo oculto de no delegar: estás pagando tu propia tarifa por hora para ordenar correos y agendar citas. Acabamos de publicar la guía en el blog.",
+            "stickerIdea": "Sticker de termómetro o fuego",
+            "cta": "Desliza para ver la solución"
+          },
+          {
+            "slideNumber": 3,
+            "headline": "Lee el artículo completo en Pixel 12 OS",
+            "text": "Cómo implementar Asistencia Virtual en tu empresa en menos de 48 horas con el método comprobado.",
+            "stickerIdea": "Sticker de enlace directo al blog de Pixel 12",
+            "cta": "Toca para leer el artículo"
+          }
+        ],
+        "linkedInPost": "¿Por qué tantos dueños de empresas siguen respondiendo mensajes directos a las 11:00 PM y coordinando citas manualmente? ⏳\n\nEn diagnósticos recientes con líderes de empresas y agencias en Latinoamérica, encontramos una constante alarmante:\n\nEl 80% de los directores invierten entre 12 y 22 horas a la semana en tareas de bajo valor añadido simplemente porque \"es más rápido hacerlo yo mismo que explicarlo\".\n\nEl resultado: estancamiento de facturación, respuesta tardía a clientes potenciales y agotamiento crónico.\n\nEn Pixel 12 resolvemos este problema con un sistema en 3 capas de Asistencia Virtual Operativa:\n\n1️⃣ Triaje sistemático de inbox y prospectos (tiempo de respuesta menor a 12 minutos).\n2️⃣ Gestión integral de agenda comercial y seguimiento en CRM sin fricción.\n3️⃣ Supervisión diaria con reportes de avance asegurando calidad ejecutiva.\n\n¿El impacto medido en nuestros clientes? Una reducción del 84% en horas operativas perdidas y más de 15 horas semanales recuperadas para estrategia y ventas.\n\nCompartí el marco completo de delegación paso a paso en el blog oficial de Pixel 12 (enlace en el primer comentario) 👇\n\n¿Qué porcentaje de tu semana dedicas hoy a tareas que alguien más podría resolver por ti?\n\n#Pixel12 #AsistenciaVirtual #MarketingDigital #Productividad #Liderazgo #EstrategiaEmpresarial #Delegar"
+      },
+      "tableOfContents": [
+        {
+          "id": "trampa-fundador",
+          "title": "La trampa del fundador todoterreno",
+          "level": 2
+        },
+        {
+          "id": "matriz-cuellos-botella",
+          "title": "1. Diagnóstico de Cuellos de Botella: Matriz de Transferencia",
+          "level": 2
+        },
+        {
+          "id": "comparativa-real",
+          "title": "2. Comparativa Real: Operación Tradicional vs. Sistema Pixel 12",
+          "level": 2
+        },
+        {
+          "id": "protocolo-onboarding",
+          "title": "3. Protocolo de Onboarding en 48 Horas",
+          "level": 2
+        },
+        {
+          "id": "preguntas-frecuentes",
+          "title": "Preguntas Frecuentes (FAQ)",
+          "level": 2
+        }
+      ]
+    },
+    {
+      "id": "blog_2",
+      "brandId": "brand_pixel12",
+      "title": "Estrategia de Contenidos de Alta Conversión en 2026: El Embudo de Autoridad para Empresas de Servicios",
+      "slug": "estrategia-contenidos-alta-conversion-redes-sociales",
+      "status": "APPROVED",
+      "author": "Camila Pinto",
+      "authorRole": "Directora de Estrategia & CEO · Pixel 12",
+      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "category": "Marketing Digital & Redes Sociales",
+      "sourceType": "topic",
+      "publishedAt": "2026-09-02T16:00:00Z",
+      "createdAt": "2026-09-01T12:00:00Z",
+      "updatedAt": "2026-09-02T15:30:00Z",
+      "coverImage": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&auto=format&fit=crop&q=80",
+      "excerpt": "Aprende cómo transformar likes y visualizaciones vacías en prospectos comerciales calificados mediante la matriz de 4 pilares de contenido de Pixel 12.",
+      "contentMarkdown": "## Más allá de las métricas de vanidad: Por qué el contenido sin estrategia no vende\n\nEn 2026, publicar por cumplir es la forma más rápida de desperdiciar presupuesto y energía de marca. Con el incremento de contenido automatizado en redes sociales, las audiencias B2B y los tomadores de decisiones han desarrollado un filtro implacable contra los mensajes genéricos.\n\nTener 100,000 visualizaciones en un video corto no sirve de nada si al final del mes no generaste una sola llamada de prospección calificada.\n\nEn **Pixel 12**, estructuramos cada campaña bajo el principio de **Autoridad & Conversión Directa**, articulando la producción audiovisual con un embudo claro que guía al usuario desde la curiosidad hasta el cierre comercial.\n\n---\n\n## 1. Los 4 Pilares del Contenido de Alto Rendimiento\n\nPara que una marca de servicios o consultoría se posicione con liderazgo indiscutido, su calendario debe equilibrar cuatro fuerzas editoriales:\n\n1. **Pilar de Autoridad (30%):** Desgloses técnicos, casos de éxito reales, comparativas antes/después y análisis de datos que demuestren dominio absoluto del sector.\n2. **Pilar Educativo / Solución de Dolores (30%):** Guías prácticas, errores habituales de la industria y soluciones inmediatas que generen el deseo de profundizar.\n3. **Pilar de Conversión & Prueba Social (25%):** Testimonios de clientes, capturas de resultados medidos, demostraciones de servicio y llamados a la acción claros hacia la bio o DM.\n4. **Pilar de Conexión y Cultura (15%):** Detrás de cámaras, filosofía del equipo Pixel 12 y visión del negocio para humanizar la marca.\n\n---\n\n## 2. La Anatomía del Gancho (Hook) de 3 Segundos\n\nEl 70% del éxito de un Reel, Short o Carrusel depende exclusivamente de los primeros 3 segundos o la primera línea del copy:\n\n- **Gancho por Pregunta Incómoda:** *\"¿Por qué tu agencia de marketing te muestra reportes llenos de clics pero tu cuenta bancaria sigue igual?\"*\n- **Gancho por Contraste Inesperado:** *\"Publicar 5 veces al día no está salvando tu marca: la está agotando. Esto es lo que medimos en 2026.\"*\n- **Gancho Numérico Específico:** *\"Las 3 fugas de dinero por las que una PyME pierde hasta $4,000 USD al mes en marketing mal gestionado.\"*\n\n---\n\n## Conclusión\n\nEl contenido no debe verse como un gasto de relaciones públicas, sino como el activo comercial más rentable y escalable de tu empresa cuando se ejecuta con la dirección estratégica adecuada.",
+      "seo": {
+        "metaTitle": "Estrategia de Contenidos y Redes Sociales de Alta Conversión | Pixel 12",
+        "metaDescription": "Descubre cómo crear un embudo de autoridad en redes sociales que convierta seguidores en clientes reales con el método oficial de Pixel 12.",
+        "focusKeyword": "estrategia de contenidos para empresas",
+        "secondaryKeywords": [
+          "marketing digital de conversion",
+          "gestion de redes sociales",
+          "embudo de contenidos",
+          "Pixel 12 marketing"
+        ],
+        "readingTime": "5 min de lectura",
+        "wordCount": 1620,
+        "score": 94,
+        "checklist": [
+          {
+            "label": "Palabra clave en el título",
+            "passed": true,
+            "tip": "Presente en H1 y meta tag"
+          },
+          {
+            "label": "Densidad equilibrada de términos de valor",
+            "passed": true,
+            "tip": "1.7% natural y legible"
+          },
+          {
+            "label": "Pilares de contenido clasificados con porcentajes",
+            "passed": true,
+            "tip": "Excelente estructura aplicable"
+          },
+          {
+            "label": "Llamados a la acción comerciales",
+            "passed": true,
+            "tip": "Guía directa hacia conversión"
+          }
+        ]
+      },
+      "tableOfContents": [
+        {
+          "id": "metricas-vanidad",
+          "title": "Más allá de las métricas de vanidad",
+          "level": 2
+        },
+        {
+          "id": "4-pilares",
+          "title": "1. Los 4 Pilares del Contenido de Alto Rendimiento",
+          "level": 2
+        },
+        {
+          "id": "anatomia-gancho",
+          "title": "2. La Anatomía del Gancho de 3 Segundos",
+          "level": 2
+        },
+        {
+          "id": "conclusion",
+          "title": "Conclusión y siguientes pasos",
+          "level": 2
+        }
+      ]
+    },
+    {
+      "id": "blog_3",
+      "brandId": "brand_pixel12",
+      "title": "Automatización Digital y Gestión de Leads: Cómo Reducir a Cero la Fuga de Prospectos en Redes Sociales",
+      "slug": "automatizacion-digital-gestion-leads-pixel12",
+      "status": "DRAFT",
+      "author": "Camila Pinto",
+      "authorRole": "Directora de Estrategia & CEO · Pixel 12",
+      "authorAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "category": "Estrategia Digital & Automatización",
+      "sourceType": "topic",
+      "createdAt": "2026-09-05T09:00:00Z",
+      "updatedAt": "2026-09-06T11:20:00Z",
+      "coverImage": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&auto=format&fit=crop&q=80",
+      "excerpt": "Metodología integral para conectar campañas en Instagram, Facebook y LinkedIn con respuestas automatizadas inteligentes y derivación directa a comerciales humanos en Pixel 12.",
+      "contentMarkdown": "## El mayor agujero negro en el marketing actual: Responder tarde\n\nUn cliente potencial que comenta una publicación o escribe un mensaje directo por Instagram tiene una ventana de interés de menos de 15 minutos. Pasada una hora, la probabilidad de cerrar una llamada de venta cae en más de un 60%.\n\nLa mayoría de las marcas invierten cientos o miles de dólares en anuncios publicitarios y producción de contenido, pero dejan morir a los interesados en la bandeja de entrada durante fines de semana o noches.\n\nEn **Pixel 12**, integramos sistemas de **automatización conversacional inteligente** combinados con asistentes virtuales operativas para asegurar que cada interacción reciba atención personalizada en segundos.\n\n---\n\n## 1. El Flujo de Captación Ininterrumpida 24/7\n\n1. **Disparador por Palabra Clave:** Cuando el usuario comenta \"SISTEMA\" en un post, una respuesta automática entrega el recurso de valor por mensaje privado en 5 segundos.\n2. **Cualificación Preliminar:** Un cuestionario ágil de 2 preguntas filtra el tamaño de empresa y el dolor principal del prospecto.\n3. **Paso al Asistente Virtual:** Si el prospecto cumple con el perfil de cliente ideal (ICP), la asistente de Pixel 12 toma la conversación en tiempo real para agendar la llamada en Google Meet.\n\n---\n\n## 2. Resultados Comprobados\n\n- **Tasa de apertura en mensajes privados:** 88% frente al 21% del correo tradicional.\n- **Tasa de asistencia a llamadas comerciales:** Incremento del 35% al enviar recordatorios automatizados por WhatsApp.",
+      "seo": {
+        "metaTitle": "Automatización de Leads y Redes Sociales | Pixel 12",
+        "metaDescription": "Aprende a capturar y cualificar leads en redes sociales de forma automatizada 24/7 con la estrategia digital de Pixel 12.",
+        "focusKeyword": "automatizacion de leads en redes",
+        "secondaryKeywords": [
+          "captacion digital 24/7",
+          "marketing conversacional",
+          "Pixel 12 automatizacion"
+        ],
+        "readingTime": "5 min de lectura",
+        "wordCount": 1540,
+        "score": 92,
+        "checklist": [
+          {
+            "label": "Palabra clave optimizada en slug y H1",
+            "passed": true,
+            "tip": "Perfectamente indexable"
+          },
+          {
+            "label": "Flujo conversacional esquematizado",
+            "passed": true,
+            "tip": "Comprensión inmediata"
+          },
+          {
+            "label": "Métricas de apertura y conversión",
+            "passed": true,
+            "tip": "Respaldo con datos"
+          }
+        ]
+      },
+      "tableOfContents": [
+        {
+          "id": "agujero-negro",
+          "title": "El mayor agujero negro: Responder tarde",
+          "level": 2
+        },
+        {
+          "id": "flujo-captacion",
+          "title": "1. El Flujo de Captación Ininterrumpida 24/7",
+          "level": 2
+        },
+        {
+          "id": "resultados",
+          "title": "2. Resultados Comprobados",
+          "level": 2
+        }
+      ]
+    }
+  ],
+  "quotes": [
+    {
+      "id": "quote_p12_001",
+      "folio": "P12-COT-2026-001",
+      "brandId": "brand_pixel12",
+      "status": "SENT",
+      "client": {
+        "name": "Dra. Valentina Morales",
+        "company": "Clínica Dermatológica & Estética Aura",
+        "email": "gerencia@auraclinic.com",
+        "phone": "+593 99 123 4567",
+        "cityCountry": "Quito, Ecuador",
+        "sector": "Salud, Estética & Dermatología Médica",
+        "website": "www.auraclinic.com"
+      },
+      "author": {
+        "name": "Mateo Roldán",
+        "role": "Director de Cuentas & Estrategia Comercial",
+        "email": "mateo@pixel12.agency",
+        "phone": "+593 99 876 5432",
+        "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+      },
+      "dates": {
+        "issueDate": "2026-09-10",
+        "validUntilDate": "2026-09-25",
+        "estimatedStartDate": "2026-09-28",
+        "estimatedDelivery": "Recurrente mensual (Ciclos de 30 días)"
+      },
+      "commercial": {
+        "selectedPlanIds": [
+          "plan_scale_360"
+        ],
+        "items": [
+          {
+            "id": "item_1",
+            "type": "plan",
+            "referenceId": "plan_scale_360",
+            "title": "Plan Scale 360 (Marketing de Autoridad + Asistencia Virtual)",
+            "description": "Ecosistema integral: 24 piezas de contenido estético editorial, pauta publicitaria en Meta Ads orientada a agendamiento de citas, y 100 horas de Asistente Virtual para atención de WhatsApp y confirmación médica.",
+            "quantity": 1,
+            "unitPrice": 1450,
+            "totalPrice": 1450,
+            "cadence": "Mensual",
+            "deliverables": [
+              "24 Contenidos visuales y carruseles médicos de alta autoridad",
+              "Campaña de Meta Ads para captación de tratamientos estéticos de alto ticket",
+              "100 Horas de Asistente Virtual dedicada en WhatsApp Business",
+              "Embudo automatizado para agendamiento y confirmación de consultas"
+            ]
+          },
+          {
+            "id": "item_2",
+            "type": "service",
+            "referenceId": "srv_reels_pack",
+            "title": "Pack Adicional de 8 Reels Educativos sobre Procedimientos",
+            "description": "Edición dinámica con subtítulos animados prémium sobre toxina botulínica, bioestimuladores y cuidado facial.",
+            "quantity": 1,
+            "unitPrice": 380,
+            "totalPrice": 380,
+            "cadence": "Mensual",
+            "deliverables": [
+              "8 Reels editados en 9:16 con gancho y llamada a la acción a la clínica"
+            ]
+          }
+        ],
+        "subtotal": 1830,
+        "discountType": "fixed",
+        "discountValue": 130,
+        "discountAmount": 130,
+        "taxEnabled": true,
+        "taxPercentage": 15,
+        "taxAmount": 255,
+        "totalPrice": 1955,
+        "currency": "USD",
+        "paymentMethod": "Transferencia Bancaria Empresarial / Tarjeta de Crédito (Stripe)",
+        "paymentTerms": "50% anticipo al inicio de cada mes y 50% al día 15 del mes operativo.",
+        "deliveryTimeframe": "Inicio en 48h tras anticipo. Parrilla de la primera quincena lista en 5 días.",
+        "observations": "Se asignará una Asistente Virtual con formación previa en protocolos de atención al paciente y confidencialidad médica.",
+        "additionalNotes": "La pauta publicitaria estimada sugerida para Meta Ads es de $400 USD mensuales administrados desde su propia cuenta publicitaria."
+      },
+      "aiNarrative": {
+        "title": "Propuesta Estratégica de Crecimiento & Delegación para Clínica Aura",
+        "executiveSummary": "Clínica Aura posee una reputación médica intachable, pero su presencia digital actual y la demora de más de 4 horas en responder consultas por WhatsApp frenan la conversión de pacientes para tratamientos premium. Pixel 12 propone un sistema doble: contenido visual de lujo que eleve la percepción de valor, complementado por una asistente virtual dedicada que contacta al paciente en menos de 5 minutos y asegura la consulta médica en agenda.",
+        "agencyIntro": "Pixel 12 OS es una agencia especializada en la intersección de marketing digital de alto impacto, dirección de arte contemporánea y asistencia virtual ejecutiva. Nuestro modelo elimina la fricción entre atraer prospectos y atenderlos comercialmente, permitiendo a clínicas y empresas duplicar su captación sin sobrecargar al equipo médico.",
+        "clientDiagnosis": "1. Fuga de pacientes de alto ticket por tiempo de respuesta promedio de 4.2 horas en canales digitales.\n2. Contenido en redes intermitente que no refleja el nivel estético de las instalaciones ni la trayectoria médica.\n3. Ausencia de un embudo predecible con pauta segmentada a zonas de alto poder adquisitivo.",
+        "proposedSolution": "Implementar el Plan Scale 360: producción mensual de contenidos de autoridad médica con dirección de arte Negro/Oro/Blanco de Pixel 12, pauta segmentada en Meta Ads hacia audiencias VIP de la ciudad, y una Asistente Virtual calificada que gestionará la agenda en tiempo real y confirmará los recordatorios para reducir el ausentismo (no-show) a menos del 5%.",
+        "roadmapPhases": [
+          {
+            "phase": "Fase 1",
+            "title": "Diagnóstico, Onboarding y Setup Operativo",
+            "duration": "Días 1 a 4",
+            "description": "Capacitación de la asistente virtual en tratamientos y precios de la clínica. Configuración del Business Manager y accesos.",
+            "deliverables": [
+              "Manual de respuestas rápidas",
+              "Setup de WhatsApp Business",
+              "Briefing visual"
+            ]
+          },
+          {
+            "phase": "Fase 2",
+            "title": "Producción de Contenido y Lanzamiento de Pauta",
+            "duration": "Días 5 a 12",
+            "description": "Diseño de las primeras 12 piezas de contenido y activación de las campañas de captación en Instagram y Facebook.",
+            "deliverables": [
+              "Parrilla quincenal aprobada",
+              "Campañas activas en Meta Ads",
+              "Pruebas de embudo"
+            ]
+          },
+          {
+            "phase": "Fase 3",
+            "title": "Optimización de Agendamiento y Escala",
+            "duration": "Días 13 a 30",
+            "description": "Ajuste diario de pujas publicitarias y reporte continuo de pacientes agendados y confirmados.",
+            "deliverables": [
+              "Dashboard de métricas en tiempo real",
+              "Reporte mensual ejecutivo"
+            ]
+          }
+        ],
+        "valueJustification": "Con solo 3 pacientes adicionales de tratamientos como toxina botulínica o armonización facial (ticket promedio $600 USD), la inversión mensual queda 100% amortizada y genera retorno neto para la clínica desde el primer mes.",
+        "deliverablesList": [
+          "24 Publicaciones de autor con diseño editorial y copywriting médico",
+          "8 Reels editados con b-roll cinematográfico y subtítulos dinámicos",
+          "100 Horas de Asistencia Virtual dedicada para WhatsApp y agenda",
+          "Setup y gestión de campañas en Meta Ads con pruebas A/B continuas",
+          "Reporte de pacientes captados, costo por lead y tasa de cierre"
+        ],
+        "roiBenefits": [
+          "+45% Incremento estimado en consultas agendadas en los primeros 60 días",
+          "Reducción del tiempo de respuesta a prospectos de 4 horas a < 5 minutos",
+          "Eliminación del 90% del trabajo administrativo para la Dra. Valentina Morales",
+          "Construcción de un activo digital de marca médica reconocida y respetada"
+        ],
+        "recommendedAddons": [
+          "Automatización con ManyChat para respuesta instantánea 24/7 en Instagram DMs ($350 pago único)",
+          "Redacción de 4 artículos de blog SEO para posicionar la clínica en Google ($280/mes)"
+        ],
+        "closingCta": "Acepta esta propuesta haciendo clic en el botón de confirmación para programar la sesión de onboarding y comenzar este lunes con la transferencia de tareas operativas.",
+        "commercialNotes": "Cualquier requerimiento no especificado se cotizará por separado bajo tarifa preferencial de cliente Pixel 12."
+      },
+      "visuals": [
+        {
+          "id": "vis_1",
+          "type": "cover",
+          "title": "Portada Ejecutiva: Propuesta Aura & Pixel 12",
+          "subtitle": "Diseño Obsidiana & Oro con dirección de arte estética",
+          "imageUrl": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1000&auto=format&fit=crop&q=80",
+          "aspectRatio": "16:9",
+          "category": "Cotizaciones",
+          "style": "Pixel 12 Luxury (Negro, Oro, Plata)"
+        },
+        {
+          "id": "vis_2",
+          "type": "concept",
+          "title": "Concepto Visual: Autoridad Médica & Sofisticación",
+          "subtitle": "Fotografía editorial de alta gama para procedimientos estéticos",
+          "imageUrl": "https://images.unsplash.com/photo-1512290900672-1f4a9b6c167e?w=800&auto=format&fit=crop&q=80",
+          "aspectRatio": "1:1",
+          "category": "Propuestas",
+          "style": "Editorial Ejecutivo"
+        },
+        {
+          "id": "vis_3",
+          "type": "solution",
+          "title": "Flujo de Asistencia Virtual & Cierre de Citas",
+          "subtitle": "Conexión entre lead en redes y paciente en camilla",
+          "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&auto=format&fit=crop&q=80",
+          "aspectRatio": "4:5",
+          "category": "Asistencia virtual",
+          "style": "Pixel 12 Gold & Black (Oficial)"
+        }
+      ],
+      "termsAndConditions": [
+        "Validez de la oferta: 15 días continuos desde el 10 de Septiembre de 2026.",
+        "Forma de pago: 50% anticipo al confirmar y 50% a los 15 días de operaciones.",
+        "El presupuesto publicitario en Meta Ads será abonado directamente por el cliente.",
+        "Los derechos patrimoniales sobre todas las piezas creadas pertenecen al cliente.",
+        "Ambas partes suscriben acuerdo de confidencialidad médica y comercial."
+      ],
+      "createdAt": "2026-09-10T14:30:00Z",
+      "updatedAt": "2026-09-11T16:00:00Z"
+    },
+    {
+      "id": "quote_p12_002",
+      "folio": "P12-COT-2026-002",
+      "brandId": "brand_pixel12",
+      "status": "ACCEPTED",
+      "client": {
+        "name": "Sofía Carrión & Roberto Silva",
+        "company": "Sartorial Luxury Studio",
+        "email": "direccion@sartorialstudio.com",
+        "phone": "+593 98 765 4321",
+        "cityCountry": "Guayaquil / Cuenca, Ecuador",
+        "sector": "Moda Sostenible, Alta Costura & Diseño Textil",
+        "website": "www.sartorialstudio.com"
+      },
+      "author": {
+        "name": "Mateo Roldán",
+        "role": "Director Creativo & Estrategia Pixel 12",
+        "email": "mateo@pixel12.agency",
+        "phone": "+593 99 876 5432"
+      },
+      "dates": {
+        "issueDate": "2026-09-02",
+        "validUntilDate": "2026-09-17",
+        "estimatedStartDate": "2026-09-15",
+        "estimatedDelivery": "Recurrente mensual"
+      },
+      "commercial": {
+        "selectedPlanIds": [
+          "plan_social_growth",
+          "plan_branding_premium"
+        ],
+        "items": [
+          {
+            "id": "item_s1",
+            "type": "plan",
+            "referenceId": "plan_social_growth",
+            "title": "Plan Social Growth & Contenido Editorial (The Mentors Style)",
+            "description": "16 Piezas mensuales con estilo editorial de alta costura, tipografías condensadas bold, fichas técnicas y moodboards fotográficos.",
+            "quantity": 1,
+            "unitPrice": 650,
+            "totalPrice": 650,
+            "cadence": "Mensual"
+          },
+          {
+            "id": "item_s2",
+            "type": "plan",
+            "referenceId": "plan_branding_premium",
+            "title": "Rebranding & Manual de Identidad Visual Sartorial",
+            "description": "Manual de marca de 35 páginas, códigos tipográficos para moda, monograma y 12 plantillas maestras en Figma.",
+            "quantity": 1,
+            "unitPrice": 1200,
+            "totalPrice": 1200,
+            "cadence": "Pago único"
+          }
+        ],
+        "subtotal": 1850,
+        "discountType": "percentage",
+        "discountValue": 10,
+        "discountAmount": 185,
+        "taxEnabled": true,
+        "taxPercentage": 15,
+        "taxAmount": 249.75,
+        "totalPrice": 1914.75,
+        "currency": "USD",
+        "paymentMethod": "Transferencia Bancaria Internacional / Tarjeta Corporativa",
+        "paymentTerms": "50% anticipo al iniciar y 50% al entregar el manual de marca.",
+        "deliveryTimeframe": "Fase Branding: 18 días. Redes: inicio simultáneo."
+      },
+      "aiNarrative": {
+        "title": "Propuesta de Rebranding Editorial & Estrategia de Contenidos Sartorial Studio",
+        "executiveSummary": "Sartorial Studio diseña prendas de calidad internacional pero su identidad visual en Instagram no comunicaba exclusividad. Diseñamos un nuevo universo de marca inspirado en revistas europeas de alta costura y carruseles editoriales tipo The Mentors, con fotografía en círculo y tipografía imponente.",
+        "agencyIntro": "Pixel 12 OS - Crafting luxury narratives for forward-thinking brands.",
+        "clientDiagnosis": "Precios por debajo de su verdadero valor debido a una identidad gráfica desactualizada.",
+        "proposedSolution": "Rebranding integral + parrilla mensual de 16 publicaciones con estética editorial de alta costura.",
+        "roadmapPhases": [
+          {
+            "phase": "Fase 1",
+            "title": "Brand Discovery & Moodboarding",
+            "duration": "Semana 1",
+            "description": "Definición de arquetipo de marca, paleta y tipografías display.",
+            "deliverables": [
+              "Moodboard aprobado",
+              "Propuestas de logo"
+            ]
+          },
+          {
+            "phase": "Fase 2",
+            "title": "Manual de Marca & Templates",
+            "duration": "Semana 2 y 3",
+            "description": "Entrega de manual y plantillas de carrusel estilo editorial.",
+            "deliverables": [
+              "Manual de 35 páginas",
+              "Templates Figma"
+            ]
+          }
+        ],
+        "valueJustification": "Elevar la percepción visual permite incrementar el precio de las colecciones entre un 30% y 50% sin resistencia del cliente.",
+        "deliverablesList": [
+          "Manual de identidad y logotipo maestro",
+          "16 Carruseles editoriales mensuales listos para publicar",
+          "Copywriting en tono refinado y sofisticado"
+        ],
+        "roiBenefits": [
+          "Posicionamiento como marca de lujo y alta costura en la región",
+          "Atracción de boutiques internacionales y clientes privados VIP"
+        ],
+        "recommendedAddons": [
+          "Sesión de fotos editorial en locación ($450)"
+        ],
+        "closingCta": "Propuesta aceptada formalmente el 04 de Septiembre de 2026.",
+        "commercialNotes": "Proyecto actualmente en fase de despliegue y producción."
+      },
+      "visuals": [
+        {
+          "id": "vis_sartorial_1",
+          "type": "editorial",
+          "title": "Lookbook Editorial Sartorial Studio",
+          "subtitle": "Inspiración estilo The Mentors con tipografía bold y corte circular",
+          "imageUrl": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80",
+          "aspectRatio": "4:5",
+          "category": "Branding",
+          "style": "Editorial The Mentors Style"
+        }
+      ],
+      "termsAndConditions": [
+        "Vigencia: aceptada y en ejecución.",
+        "Pagos: anticipo cancelado el 04 de Septiembre de 2026."
+      ],
+      "createdAt": "2026-09-02T10:00:00Z",
+      "updatedAt": "2026-09-04T12:00:00Z"
+    },
+    {
+      "id": "quote_p12_003",
+      "folio": "P12-COT-2026-003",
+      "brandId": "brand_pixel12",
+      "status": "VIEWED",
+      "client": {
+        "name": "Ing. Carlos Mendoza",
+        "company": "Nexus Real Estate & Inversiones",
+        "email": "carlos@nexusrealestate.ec",
+        "phone": "+593 99 999 8888",
+        "cityCountry": "Quito, Ecuador",
+        "sector": "Bienes Raíces & Desarrollos Inmobiliarios"
+      },
+      "author": {
+        "name": "Camila Torres",
+        "role": "Operations & VA Lead Pixel 12",
+        "email": "camila@pixel12.agency",
+        "phone": "+593 99 876 5432"
+      },
+      "dates": {
+        "issueDate": "2026-09-11",
+        "validUntilDate": "2026-09-26",
+        "estimatedStartDate": "2026-10-01",
+        "estimatedDelivery": "Mensual"
+      },
+      "commercial": {
+        "selectedPlanIds": [
+          "plan_asistencia_virtual"
+        ],
+        "items": [
+          {
+            "id": "item_va_1",
+            "type": "plan",
+            "referenceId": "plan_asistencia_virtual",
+            "title": "Plan Asistencia Virtual Ejecutiva (80 Horas Mensuales)",
+            "description": "Asistente virtual dedicada para prospección y respuesta inmediata a interesados en proyectos inmobiliarios por WhatsApp y portales.",
+            "quantity": 1,
+            "unitPrice": 850,
+            "totalPrice": 850,
+            "cadence": "Mensual"
+          }
+        ],
+        "subtotal": 850,
+        "discountType": "percentage",
+        "discountValue": 0,
+        "discountAmount": 0,
+        "taxEnabled": true,
+        "taxPercentage": 15,
+        "taxAmount": 127.5,
+        "totalPrice": 977.5,
+        "currency": "USD",
+        "paymentMethod": "Transferencia Bancaria / Débito recurrente",
+        "paymentTerms": "Mensualidad prepagada primeros 5 días de cada mes.",
+        "deliveryTimeframe": "Onboarding e inicio operativo en 48 horas."
+      },
+      "aiNarrative": {
+        "title": "Propuesta de Asistencia Virtual Operativa para Nexus Real Estate",
+        "executiveSummary": "Nexus Real Estate invierte miles de dólares en captar leads para sus proyectos residenciales, pero el 60% de los interesados se enfrían por falta de respuesta en los primeros 10 minutos. Una asistente virtual entrenada por Pixel 12 contactará y perfilará al inversionista al instante.",
+        "agencyIntro": "Pixel 12 OS - Automatización, Asistencia y Marketing para bienes raíces.",
+        "clientDiagnosis": "Pérdida de ventas millonarias por demora en atención de leads inmobiliarios.",
+        "proposedSolution": "Asignación de asistente virtual dedicada en jornada continua de 80h/mes.",
+        "roadmapPhases": [
+          {
+            "phase": "Fase 1",
+            "title": "Filtro y Scripting Inmobiliario",
+            "duration": "3 días",
+            "description": "Carga de fichas de proyectos y precios.",
+            "deliverables": [
+              "Scripts de calificación"
+            ]
+          }
+        ],
+        "valueJustification": "Una sola venta de departamento adicional paga más de 3 años de asistencia virtual.",
+        "deliverablesList": [
+          "80 Horas mensuales de atención",
+          "Calificación de inversionistas",
+          "Agendamiento de visitas"
+        ],
+        "roiBenefits": [
+          "Respuesta en < 3 minutos",
+          "Aumento del 40% en visitas concretadas"
+        ],
+        "recommendedAddons": [
+          "Automatización con WhatsApp CRM ($350)"
+        ],
+        "closingCta": "Haz clic para aceptar la propuesta y coordinar el onboarding del equipo.",
+        "commercialNotes": "Horario: 9am a 6pm de lunes a viernes."
+      },
+      "visuals": [
+        {
+          "id": "vis_nexus_1",
+          "type": "solution",
+          "title": "Asistencia Virtual Inmobiliaria",
+          "subtitle": "Atención personalizada y agendamiento de visitas a proyectos",
+          "imageUrl": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop&q=80",
+          "aspectRatio": "16:9",
+          "category": "Asistencia virtual"
+        }
+      ],
+      "termsAndConditions": [
+        "Vigencia: 15 días.",
+        "Facturación mensual prepagada."
+      ],
+      "createdAt": "2026-09-11T11:00:00Z",
+      "updatedAt": "2026-09-12T15:20:00Z"
+    }
+  ],
+  "plans": [
+    {
+      "id": "plan_social_growth",
+      "name": "Plan Social Growth & Contenido",
+      "tagline": "Crecimiento de comunidad y autoridad con diseño prémium de alta costura digital",
+      "description": "Gestión integral de presencia en redes sociales (Instagram, LinkedIn y Facebook) con 16 piezas de contenido mensuales, carruseles de autoridad, reels guionados y community management activo.",
+      "price": 650,
+      "currency": "USD",
+      "cadence": "Mensual",
+      "badge": "MÁS POPULAR EN REDES",
+      "isPopular": false,
+      "order": 1,
+      "isActive": true,
+      "imageUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80",
+      "includedServices": [
+        "16 Publicaciones mensuales (Carruseles de alta conversión, Posts estáticos y Reels)",
+        "Diseño visual con identidad editorial de alta gama (Paleta Negro, Oro, Plata y Blanco)",
+        "Copywriting persuasivo con metodología AIDA y optimización de hashtags",
+        "Community Management diario (Respuesta a comentarios y DMs en <30 min)",
+        "Programación y distribución multicanal automatizada",
+        "Reporte mensual de métricas de alcance, interacción y crecimiento orgánico"
+      ],
+      "benefits": [
+        "Posicionamiento inmediato como referente indiscutible en tu sector",
+        "Recuperación de +20 horas al mes que antes perdías diseñando y publicando",
+        "Consistencia visual y de mensaje sin fallar un solo día en la parrilla",
+        "Atracción de prospectos calificados interesados en tus servicios de alto valor"
+      ],
+      "features": [
+        "Reunión mensual de alineación estratégica (45 min)",
+        "Tablero en vivo de aprobaciones antes de publicar en redes",
+        "Acceso al Brand Kit exclusivo y assets adaptados a tu audiencia"
+      ],
+      "conditions": [
+        "Compromiso mínimo sugerido de 3 meses para consolidación de algoritmo",
+        "El cliente aprueba las piezas de la semana con al menos 48h de anticipación",
+        "No incluye inversión directa en pauta publicitaria (Meta Ads / Ads spend)"
+      ]
+    },
+    {
+      "id": "plan_asistencia_virtual",
+      "name": "Plan Asistencia Virtual Ejecutiva",
+      "tagline": "Delegación operativa total para fundadores y directores de empresa",
+      "description": "Asistente virtual bilingüe dedicada y altamente capacitada para absorber tu agenda, atención a prospectos en WhatsApp/DMs, facturación, seguimiento comercial y gestión de clientes.",
+      "price": 850,
+      "currency": "USD",
+      "cadence": "Mensual",
+      "badge": "ALTA EFICIENCIA",
+      "isPopular": false,
+      "order": 2,
+      "isActive": true,
+      "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&auto=format&fit=crop&q=80",
+      "includedServices": [
+        "80 Horas mensuales de asistencia virtual ejecutiva dedicada (Lunes a Viernes)",
+        "Gestión de agenda ejecutiva, reuniones y confirmación de citas en Google Calendar/Calendly",
+        "Atención y filtro de prospectos calificados en WhatsApp Business, DMs y correo corporativo",
+        "Emisión de cotizaciones, seguimiento a propuestas y facturación básica",
+        "Organización de archivos en Google Drive / Notion y transcripción de minutas",
+        "Supervisión continua por parte del Project Manager Senior de Pixel 12"
+      ],
+      "benefits": [
+        "Recuperas entre 15 y 20 horas operativas semanales para enfocarte en ventas y visión",
+        "Cero cargas patronales, contratos laborales rígidos ni costos de liquidación",
+        "Atención inmediata a clientes potenciales evitando fugas de ventas por demoras",
+        "Onboarding y manual de operaciones documentado y operativo en solo 48 horas"
+      ],
+      "features": [
+        "Asistente bilingüe (Español nativo / Inglés intermedio-avanzado)",
+        "Control de tiempo transparente medido y verificado con software de productividad",
+        "Sustitución inmediata sin costo en caso de vacaciones o contingencias"
+      ],
+      "conditions": [
+        "Horario de servicio de lunes a viernes en jornada acordada (América/Bogotá/Quito/Miami)",
+        "Horas no acumulables de un mes a otro salvo acuerdo previo por proyecto extraordinario",
+        "Preaviso de 15 días para cancelación o modificación del plan"
+      ]
+    },
+    {
+      "id": "plan_scale_360",
+      "name": "Plan Scale 360 (Marketing + Asistencia)",
+      "tagline": "La solución definitiva: agencia de marketing + equipo operativo integrado",
+      "description": "El ecosistema completo de Pixel 12: estrategia de contenidos de autoridad, pauta publicitaria en Meta Ads, y asistente virtual ejecutiva encargada de cerrar y agendar a los prospectos que llegan.",
+      "price": 1450,
+      "currency": "USD",
+      "cadence": "Mensual",
+      "badge": "⭐ RECOMENDADO / MÁS VENDIDO",
+      "isPopular": true,
+      "order": 3,
+      "isActive": true,
+      "imageUrl": "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&auto=format&fit=crop&q=80",
+      "includedServices": [
+        "24 Piezas de contenido mensual (carruseles editoriales, reels y posts de autoridad)",
+        "Setup, segmentación y optimización semanal de campañas de Meta Ads (Facebook e Instagram)",
+        "100 Horas mensuales de Asistente Virtual dedicada para atención comercial y operaciones",
+        "Embudo de conversión con respuestas automatizadas en ManyChat / WhatsApp API",
+        "Diseño de landing page o lead magnet de captura de prospectos",
+        "Dashboard ejecutivo en tiempo real con KPIs de retorno de inversión (ROAS y CAC)"
+      ],
+      "benefits": [
+        "Generación predecible de llamadas comerciales con prospectos calificados listos para comprar",
+        "Tu asistente virtual filtra y atiende al lead en los primeros 5 minutos del contacto",
+        "Ahorro del 65% frente a contratar una agencia tradicional y personal interno por separado",
+        "Acompañamiento directo con un Director de Crecimiento de Pixel 12"
+      ],
+      "features": [
+        "2 Sesiones mensuales de estrategia y optimización comercial (1 hora c/u)",
+        "Canal privado de Slack / WhatsApp VIP con respuesta prioritaria en menos de 15 min",
+        "Copywriting de venta directa y scripts telefónicos para tu equipo"
+      ],
+      "conditions": [
+        "Presupuesto de publicidad (Ad spend) corre por cuenta del cliente (mínimo recomendado $300/mes)",
+        "Facturación mensual prepagada al inicio de cada ciclo operativo",
+        "Acuerdo de confidencialidad y propiedad total de los activos digitales para el cliente"
+      ]
+    },
+    {
+      "id": "plan_branding_premium",
+      "name": "Plan Branding & Identidad Visual Premium",
+      "tagline": "Construcción de marca de lujo con acabado editorial y manual de identidad",
+      "description": "Desarrollo completo de la identidad corporativa y visual de tu marca: desde logotipo, paleta cromática de alta gama, tipografías y templates para redes hasta papelería y deck comercial.",
+      "price": 1200,
+      "currency": "USD",
+      "cadence": "Pago único",
+      "badge": "PAGO ÚNICO",
+      "isPopular": false,
+      "order": 4,
+      "isActive": true,
+      "imageUrl": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=80",
+      "includedServices": [
+        "Manual de Marca Completo (Brand Guidelines) de más de 35 páginas",
+        "Logotipo principal, versiones secundarias, isotipo y monograma vectorial",
+        "Paleta de color corporativa y código tipográfico con jerarquías claras",
+        "Pack de 12 plantillas editables en Canva / Figma para publicaciones y carruseles",
+        "Diseño de presentación comercial institucional (Pitch Deck) de 10 diapositivas",
+        "Firma de correo corporativa y cabeceras para LinkedIn, Facebook y YouTube"
+      ],
+      "benefits": [
+        "Transforma la percepción de tu negocio en una marca de autoridad y lujo que cobra más caro",
+        "Elimina para siempre la improvisación visual de tu equipo de ventas",
+        "Archivos vectoriales maestros listos para impresión en gran formato y medios digitales"
+      ],
+      "features": [
+        "Entrega de activos en formatos SVG, PNG transparente, AI, EPS y PDF alta resolución",
+        "Hasta 3 rondas de ajustes finos basadas en tus requerimientos y feedback",
+        "Sesión de entrega y capacitación sobre el uso del manual de marca"
+      ],
+      "conditions": [
+        "Tiempo estimado de ejecución: 15 a 21 días hábiles desde el onboarding",
+        "Forma de pago: 50% anticipo al iniciar y 50% contra entrega final de los archivos fuente"
+      ]
+    },
+    {
+      "id": "plan_pauta_ads",
+      "name": "Plan Pauta Digital & Captación de Leads",
+      "tagline": "Campañas de Meta Ads y Google Search orientadas a conversión directa",
+      "description": "Diseño, copywriting y optimización científica de pauta digital para generar flujo constante de prospectos interesados a tu WhatsApp, llamada de ventas o página web.",
+      "price": 500,
+      "currency": "USD",
+      "cadence": "Mensual",
+      "badge": "ALTO ROAS",
+      "isPopular": false,
+      "order": 5,
+      "isActive": true,
+      "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80",
+      "includedServices": [
+        "Creación y configuración del Píxel de Meta, API de Conversiones y Google Tag Manager",
+        "Diseño de 6 creativos publicitarios mensuales (imágenes estáticas y videos cortos)",
+        "Redacción de copies persuasivos con pruebas A/B de ganchos y ángulos de dolor",
+        "Monitoreo y optimización diaria de presupuesto, pujas y segmentaciones de audiencia",
+        "Reporte quincenal con métricas transparentes de costo por lead (CPL) y retorno"
+      ],
+      "benefits": [
+        "Multiplica las oportunidades de venta sin depender del alcance orgánico",
+        "Optimización continua del costo por adquisición de cada cliente potencial",
+        "Cero desperdicio de presupuesto gracias a exclusiones de audiencias negativas"
+      ],
+      "features": [
+        "Acceso como socio en Business Manager de Meta garantizando la propiedad de tu cuenta",
+        "Estrategia de retargeting a personas que visitaron tu perfil o página web"
+      ],
+      "conditions": [
+        "Inversión publicitaria sugerida: desde $300 USD al mes pagados directamente a Meta/Google",
+        "Honorarios de gestión mensual de Pixel 12: $500 USD facturados mensualmente"
+      ]
+    }
+  ],
+  "customServices": [
+    {
+      "id": "srv_reels_pack",
+      "name": "Pack Adicional de 8 Reels / TikToks Editados",
+      "description": "Edición dinámica con cortes rápidos, subtítulos animados prémium, efectos de sonido y b-roll cinematográfico a partir de videos crudos del cliente.",
+      "category": "Contenido & Copywriting",
+      "defaultPrice": 380,
+      "unit": "/pack",
+      "deliverables": [
+        "8 Reels en formato 9:16",
+        "Subtítulos animados",
+        "Exportación 4K/1080p"
+      ],
+      "isActive": true
+    },
+    {
+      "id": "srv_community_manager",
+      "name": "Community Management Extendido (Fines de semana y festivos)",
+      "description": "Cobertura 7 días a la semana de interacciones, comentarios en anuncios y mensajes directos para no dejar prospectos desatendidos.",
+      "category": "Marketing Digital",
+      "defaultPrice": 250,
+      "unit": "/mes",
+      "deliverables": [
+        "Respuesta en <15 min",
+        "Derivación a WhatsApp",
+        "Filtro de spam"
+      ],
+      "isActive": true
+    },
+    {
+      "id": "srv_whatsapp_automation",
+      "name": "Automatización y Chatbot en WhatsApp Business API / ManyChat",
+      "description": "Flujo automatizado de bienvenida, calificación de prospectos, envío de catálogo y derivación con la asistente virtual.",
+      "category": "Asistencia Virtual",
+      "defaultPrice": 350,
+      "unit": "pago único",
+      "deliverables": [
+        "Setup de cuenta oficial",
+        "Árbol de decisiones",
+        "Integración CRM"
+      ],
+      "isActive": true
+    },
+    {
+      "id": "srv_landing_page",
+      "name": "Diseño y Desarrollo de Landing Page de Conversión",
+      "description": "Página de aterrizaje optimizada para captura de leads o venta de servicios con alta velocidad de carga y diseño Negro/Oro prémium.",
+      "category": "Diseño & Branding",
+      "defaultPrice": 450,
+      "unit": "pago único",
+      "deliverables": [
+        "Diseño responsive",
+        "Formulario conectado a CRM/Email",
+        "Setup de hosting/dominio"
+      ],
+      "isActive": true
+    },
+    {
+      "id": "srv_extra_hours_va",
+      "name": "Bolsa Extra de 20 Horas de Asistencia Virtual",
+      "description": "Horas adicionales para contingencias operativas, campañas especiales o picos de trabajo.",
+      "category": "Asistencia Virtual",
+      "defaultPrice": 220,
+      "unit": "/pack 20h",
+      "deliverables": [
+        "Reporte de tareas",
+        "Disponibilidad inmediata",
+        "Diagnóstico PM"
+      ],
+      "isActive": true
+    },
+    {
+      "id": "srv_seo_blog",
+      "name": "Redacción de 4 Artículos de Blog SEO Long-Form",
+      "description": "Artículos de +1,200 palabras optimizados para palabras clave de alta intención de compra, con schema JSON-LD y tabla de contenidos.",
+      "category": "Contenido & Copywriting",
+      "defaultPrice": 280,
+      "unit": "/mes",
+      "deliverables": [
+        "Investigación de palabras clave",
+        "Metadatos listos",
+        "Redacción en Markdown/HTML"
+      ],
+      "isActive": true
+    }
+  ],
+  "commercialSettings": {
+    "defaultCurrency": "USD",
+    "taxEnabled": true,
+    "defaultTaxPercentage": 15,
+    "defaultValidityDays": 15,
+    "defaultPaymentMethod": "Transferencia Bancaria Internacional / Stripe / Tarjeta",
+    "defaultPaymentTerms": "50% de anticipo para inicio de actividades y 50% a los 30 días / Renovación mensual recurrente",
+    "agencyInfo": {
+      "name": "Pixel 12 Agency OS",
+      "tagline": "Agencia de Marketing Digital, Estrategia de Contenidos & Asistencia Virtual Ejecutiva",
+      "email": "contacto@pixel12.agency",
+      "phone": "+593 99 876 5432",
+      "website": "https://pixel12.agency",
+      "address": "Edificio Metropolitan Business Center, Piso 9, Quito - Ecuador / Miami, FL",
+      "logoUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80"
+    },
+    "bankDetails": {
+      "bankName": "Banco Pichincha / Chase Bank USA",
+      "accountNumber": "21008945612 / Routing 021000021",
+      "accountType": "Cuenta Corriente Empresarial",
+      "beneficiaryName": "PIXEL 12 DIGITAL SOLUTIONS S.A.S.",
+      "taxId": "RUC: 1792948271001",
+      "email": "pagos@pixel12.agency",
+      "stripeOrLink": "https://buy.stripe.com/pixel12_agency_checkout"
+    },
+    "defaultTerms": [
+      "Esta propuesta tiene una vigencia de 15 días calendario a partir de su fecha de emisión.",
+      "Los precios se encuentran expresados en dólares americanos (USD).",
+      "El inicio de los servicios se activa formalmente dentro de las 48 horas posteriores a la confirmación del pago de anticipo.",
+      "La inversión en pauta publicitaria (Meta Ads / Google Ads) se liquida directamente con la tarjeta corporativa del cliente.",
+      "Toda la propiedad intelectual de diseños, manuales y copys generados pertenecerá 100% al cliente una vez cancelado el servicio.",
+      "Pixel 12 garantiza estrictos acuerdos de confidencialidad (NDA) para toda la información compartida durante la ejecución."
+    ]
+  },
+  "imageLibrary": [
+    {
+      "id": "img_lib_01",
+      "title": "Editorial The Mentors Style - Portafolio & Styling",
+      "prompt": "Editorial luxury fashion card, dark obsidian black background, bold condensed headline \"STYLING\", cream category tags \"PRO TIPS\", \"MODA\", \"FASHION\", circular photo cutout of person with high-fashion clothes, minimalist pills, bottom capsule \"PIXEL 12 OS\"",
+      "imageUrl": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1000&auto=format&fit=crop&q=80",
+      "category": "Redes sociales",
+      "aspectRatio": "4:5",
+      "style": "Editorial The Mentors Style",
+      "tags": [
+        "Moda",
+        "Editorial",
+        "The Mentors",
+        "Carrusel",
+        "Alta Costura"
+      ],
+      "sector": "Moda & Diseño",
+      "createdAt": "2026-09-12T09:00:00Z"
+    },
+    {
+      "id": "img_lib_02",
+      "title": "Propuesta Comercial Premium - Obsidian & Gold",
+      "prompt": "Ultra luxury executive commercial proposal cover, dark obsidian black background, subtle brushed metallic gold accents (#D4AF37), modern geometric typography, Pixel 12 agency crest, sleek corporate branding",
+      "imageUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80",
+      "category": "Cotizaciones",
+      "aspectRatio": "16:9",
+      "style": "Pixel 12 Luxury (Negro, Oro, Plata)",
+      "tags": [
+        "Cotización",
+        "Portada",
+        "Obsidiana",
+        "Oro",
+        "Corporativo"
+      ],
+      "sector": "Marketing & Negocios",
+      "createdAt": "2026-09-11T12:00:00Z"
+    },
+    {
+      "id": "img_lib_03",
+      "title": "Asistencia Virtual Ejecutiva - Delegación de Alto Nivel",
+      "prompt": "Modern executive workspace, elegant bilingual virtual assistant working on laptop, minimal clean dark aesthetic, organized workflow dashboards, coffee cup, sleek stationery",
+      "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=1000&auto=format&fit=crop&q=80",
+      "category": "Asistencia virtual",
+      "aspectRatio": "1:1",
+      "style": "Pixel 12 Gold & Black (Oficial)",
+      "tags": [
+        "Asistencia Virtual",
+        "Productividad",
+        "Operaciones",
+        "Delegar"
+      ],
+      "sector": "Servicios Profesionales",
+      "createdAt": "2026-09-10T14:00:00Z"
+    },
+    {
+      "id": "img_lib_04",
+      "title": "Estrategia Digital & Analítica de Crecimiento",
+      "prompt": "Futuristic high tech marketing dashboard, glowing golden ROI graphs, dark glassmorphism, performance charts, business scale visualization",
+      "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1000&auto=format&fit=crop&q=80",
+      "category": "Marketing",
+      "aspectRatio": "16:9",
+      "style": "Tecnológico Minimalista",
+      "tags": [
+        "Métricas",
+        "Google Ads",
+        "Escalar",
+        "ROAS",
+        "Ventas"
+      ],
+      "sector": "Comercial & Tech",
+      "createdAt": "2026-09-09T18:00:00Z"
+    },
+    {
+      "id": "img_lib_05",
+      "title": "Diseño Editorial de Moda - Portafolio de Marca",
+      "prompt": "High-fashion magazine collage with models in designer outfits, bold condensed typography \"DISEÑO DE MODA\", circular detail cutout, off-white and obsidian color palette",
+      "imageUrl": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1000&auto=format&fit=crop&q=80",
+      "category": "Branding",
+      "aspectRatio": "4:5",
+      "style": "Editorial The Mentors Style",
+      "tags": [
+        "Moda",
+        "Estilo",
+        "Revista",
+        "Boutique",
+        "Portafolio"
+      ],
+      "sector": "Moda & Lujo",
+      "createdAt": "2026-09-08T10:00:00Z"
+    },
+    {
+      "id": "img_lib_06",
+      "title": "Clínica Médica & Estética - Concepto de Confianza y Lujo",
+      "prompt": "Modern architectural aesthetic dermatology clinic, clean luxury ambient lighting, sophisticated reception, gold accents, medical serenity",
+      "imageUrl": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1000&auto=format&fit=crop&q=80",
+      "category": "Propuestas",
+      "aspectRatio": "16:9",
+      "style": "Pixel 12 Luxury (Negro, Oro, Plata)",
+      "tags": [
+        "Salud",
+        "Estética",
+        "Clínica",
+        "Bienestar",
+        "Propuesta"
+      ],
+      "sector": "Salud & Estética",
+      "createdAt": "2026-09-07T15:00:00Z"
+    }
+  ],
+  "crmContacts": [
+    {
+      "id": "cont_valarezo",
+      "firstName": "Sebastián",
+      "lastName": "Valarezo",
+      "fullName": "Arq. Sebastián Valarezo",
+      "email": "svalarezo@urbatec.com.ec",
+      "phone": "+593 98 421 9870",
+      "whatsapp": "593984219870",
+      "position": "Director Ejecutivo / Socio Fundador",
+      "companyId": "comp_urbatec",
+      "companyName": "Constructora Urbatec S.A.",
+      "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      "cityCountry": "Samborondón, Ecuador",
+      "linkedinUrl": "https://linkedin.com/in/sebastianvalarezo",
+      "notes": "Súper ejecutivo, aprecia reportes rápidos y claros de retorno de inversión. Reunión mensual de balance.",
+      "tags": [
+        "VIP",
+        "Inmobiliaria",
+        "Decisor",
+        "Scale 360"
+      ],
+      "status": "CLIENT",
+      "leadSource": "Referral",
+      "leadScore": 98,
+      "assignedToMemberId": "mem_1",
+      "assignedToName": "Alejandro Morales",
+      "contractedServices": [
+        {
+          "id": "serv_urba_1",
+          "name": "Plan Scale 360 (Marketing + Asistente Virtual)",
+          "type": "PLAN",
+          "monthlyPrice": 1450,
+          "billingCadence": "Mensual",
+          "startDate": "2026-01-15",
+          "status": "ACTIVE",
+          "deliverables": [
+            "24 Contenidos de autoridad y renders",
+            "Gestión de campañas Meta Ads para captar compradores",
+            "Asistente virtual para responder WhatsApp y calificar prospectos inmobiliarios"
+          ],
+          "quoteId": "quote_urbatec_01"
+        }
+      ],
+      "associatedQuoteIds": [
+        "quote_urbatec_01"
+      ],
+      "createdAt": "2026-01-10T11:00:00.000Z",
+      "updatedAt": "2026-03-01T15:30:00.000Z"
+    },
+    {
+      "id": "cont_mendoza",
+      "firstName": "Carmen",
+      "lastName": "Mendoza",
+      "fullName": "Dra. Carmen Mendoza",
+      "email": "dra.carmen@odontoelite.ec",
+      "phone": "+593 99 712 3450",
+      "whatsapp": "593997123450",
+      "position": "Directora Médica & Especialista en Rehabilitación Oral",
+      "companyId": "comp_odontoelite",
+      "companyName": "OdontoElite Clínica Dental Especializada",
+      "avatarUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+      "cityCountry": "Guayaquil, Ecuador",
+      "linkedinUrl": "https://linkedin.com/in/carmenmendozadds",
+      "notes": "Tiene 4 odontólogos en la clínica. Le enviamos cotización de Asistencia Virtual + Marketing. Está evaluando con su socio financiero.",
+      "tags": [
+        "Salud Dental",
+        "Lead Calificado",
+        "Asistencia Virtual",
+        "En Espera"
+      ],
+      "status": "PROSPECT",
+      "leadSource": "Instagram",
+      "leadScore": 82,
+      "assignedToMemberId": "mem_1",
+      "assignedToName": "Alejandro Morales",
+      "contractedServices": [],
+      "associatedQuoteIds": [
+        "quote_odonto_01"
+      ],
+      "createdAt": "2026-02-18T09:00:00.000Z",
+      "updatedAt": "2026-03-10T14:20:00.000Z"
+    },
+    {
+      "id": "cont_morales",
+      "firstName": "Rodrigo",
+      "lastName": "Morales",
+      "fullName": "Ing. Rodrigo Morales",
+      "email": "rodrigo@gourmetgrouplatam.com",
+      "phone": "+593 99 123 4567",
+      "whatsapp": "593991234567",
+      "position": "Gerente General",
+      "companyId": "comp_gourmet",
+      "companyName": "Gourmet Group Latam",
+      "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "cityCountry": "Quito, Ecuador",
+      "linkedinUrl": "https://linkedin.com/in/rodrigomoralesgourmet",
+      "notes": "Muy satisfecho con el rendimiento del mes anterior. Quiere sumar pauta publicitaria para el nuevo local en Cumbayá.",
+      "tags": [
+        "Gastronomía",
+        "Cliente Activo",
+        "Posible Up-Sell"
+      ],
+      "status": "CLIENT",
+      "leadSource": "Meta Ads",
+      "leadScore": 92,
+      "assignedToMemberId": "mem_1",
+      "assignedToName": "Alejandro Morales",
+      "contractedServices": [
+        {
+          "id": "serv_gour_1",
+          "name": "Plan Social Growth & Contenido Gastronómico",
+          "type": "PLAN",
+          "monthlyPrice": 650,
+          "billingCadence": "Mensual",
+          "startDate": "2026-02-01",
+          "status": "ACTIVE",
+          "deliverables": [
+            "16 Posts y reels mensuales",
+            "Community Management diario",
+            "Reporte de interacción y promociones"
+          ]
+        }
+      ],
+      "associatedQuoteIds": [],
+      "createdAt": "2026-01-20T14:00:00.000Z",
+      "updatedAt": "2026-03-05T11:15:00.000Z"
+    },
+    {
+      "id": "cont_viteri",
+      "firstName": "Andrés",
+      "lastName": "Viteri",
+      "fullName": "Dr. Andrés Viteri",
+      "email": "dr.viteri@andresviterimd.com",
+      "phone": "+593 98 765 4321",
+      "whatsapp": "593987654321",
+      "position": "Cirujano Plástico & Director",
+      "companyId": "comp_viteri",
+      "companyName": "Dr. Andrés Viteri - Cirugía Plástica & Estética",
+      "avatarUrl": "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=200&auto=format&fit=crop&q=80",
+      "cityCountry": "Guayaquil, Ecuador",
+      "linkedinUrl": "https://linkedin.com/in/andresviterimd",
+      "notes": "Interesado en branding de lujo y producción audiovisual cinematográfica. Presupuesto aprobado de $2,000+.",
+      "tags": [
+        "Cirugía Estética",
+        "High Ticket",
+        "Cierre Inminente"
+      ],
+      "status": "PROSPECT",
+      "leadSource": "Web",
+      "leadScore": 89,
+      "assignedToMemberId": "mem_1",
+      "assignedToName": "Alejandro Morales",
+      "contractedServices": [],
+      "associatedQuoteIds": [
+        "quote_viteri_01"
+      ],
+      "createdAt": "2026-02-28T16:00:00.000Z",
+      "updatedAt": "2026-03-12T10:00:00.000Z"
+    },
+    {
+      "id": "cont_castillo",
+      "firstName": "Valeria",
+      "lastName": "Castillo",
+      "fullName": "Econ. Valeria Castillo",
+      "email": "vcastillo@finanzplus.com",
+      "phone": "+593 99 888 7766",
+      "whatsapp": "593998887766",
+      "position": "Socia Directora de Consultoría Tributaria",
+      "companyId": "comp_finanzplus",
+      "companyName": "FinanzPlus Asesores Corporativos",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "cityCountry": "Quito, Ecuador",
+      "linkedinUrl": "https://linkedin.com/in/valeriacastillofinanz",
+      "notes": "Agendada videollamada para definir estrategia de autoridad y creación de artículos de blog SEO.",
+      "tags": [
+        "Finanzas",
+        "B2B",
+        "Autoridad",
+        "Lead Nuevo"
+      ],
+      "status": "LEAD",
+      "leadSource": "LinkedIn",
+      "leadScore": 75,
+      "assignedToMemberId": "mem_1",
+      "assignedToName": "Alejandro Morales",
+      "contractedServices": [],
+      "associatedQuoteIds": [],
+      "createdAt": "2026-03-02T11:00:00.000Z",
+      "updatedAt": "2026-03-11T16:45:00.000Z"
+    }
+  ],
+  "crmCompanies": [
+    {
+      "id": "comp_urbatec",
+      "name": "Constructora Urbatec S.A.",
+      "tradeName": "Urbatec Desarrollos Inmobiliarios",
+      "taxId": "0992384712001",
+      "sector": "Inmobiliario & Construcción",
+      "website": "https://urbatec.com.ec",
+      "address": "Av. Samborondón Km 2.5, Edificio Platinum Plaza Piso 4",
+      "cityCountry": "Samborondón, Ecuador",
+      "phone": "+593 4 283 9100",
+      "email": "contacto@urbatec.com.ec",
+      "logoUrl": "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=200&auto=format&fit=crop&q=80",
+      "employeeCount": "50 - 100 empleados",
+      "estimatedRevenue": "$2M - $5M anuales",
+      "notes": "Cliente con alta capacidad de inversión. Interesados en vender proyectos sobre planos y captar inversores internacionales.",
+      "tags": [
+        "Inmobiliaria",
+        "High Ticket",
+        "Cliente Activo",
+        "Pauta Activa"
+      ],
+      "clientStatus": "ACTIVE_CLIENT",
+      "contactIds": [
+        "cont_valarezo"
+      ],
+      "contractedServices": [
+        {
+          "id": "serv_urba_1",
+          "name": "Plan Scale 360 (Marketing + Asistente Virtual)",
+          "type": "PLAN",
+          "monthlyPrice": 1450,
+          "billingCadence": "Mensual",
+          "startDate": "2026-01-15",
+          "status": "ACTIVE",
+          "deliverables": [
+            "24 Contenidos de autoridad y renders",
+            "Gestión de campañas Meta Ads para captar compradores",
+            "Asistente virtual para responder WhatsApp y calificar prospectos inmobiliarios"
+          ],
+          "quoteId": "quote_urbatec_01"
+        }
+      ],
+      "lifetimeValue": 4350,
+      "createdAt": "2026-01-10T11:00:00.000Z",
+      "updatedAt": "2026-03-01T15:30:00.000Z"
+    },
+    {
+      "id": "comp_odontoelite",
+      "name": "OdontoElite Clínica Dental Especializada",
+      "tradeName": "OdontoElite",
+      "taxId": "0998127364001",
+      "sector": "Salud & Estética Dental",
+      "website": "https://odontoelite.ec",
+      "address": "Av. Francisco de Orellana, Torre Médica Atlas Cons. 602",
+      "cityCountry": "Guayaquil, Ecuador",
+      "phone": "+593 99 712 3450",
+      "email": "dra.carmen@odontoelite.ec",
+      "logoUrl": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=200&auto=format&fit=crop&q=80",
+      "employeeCount": "10 - 25 empleados",
+      "estimatedRevenue": "$400k - $800k anuales",
+      "notes": "Quieren posicionar diseño de sonrisa y ortodoncia invisible. Su mayor cuello de botella es que no responden los WhatsApp a tiempo y pierden pacientes.",
+      "tags": [
+        "Salud Dental",
+        "Lead Calificado",
+        "Urgente Asistencia",
+        "Propuesta Presentada"
+      ],
+      "clientStatus": "PROSPECT",
+      "contactIds": [
+        "cont_mendoza"
+      ],
+      "contractedServices": [],
+      "lifetimeValue": 0,
+      "createdAt": "2026-02-18T09:00:00.000Z",
+      "updatedAt": "2026-03-10T14:20:00.000Z"
+    },
+    {
+      "id": "comp_gourmet",
+      "name": "Gourmet Group Latam",
+      "tradeName": "Gourmet Group",
+      "taxId": "1792456789001",
+      "sector": "Restaurantes & Gastronomía",
+      "website": "https://gourmetgrouplatam.com",
+      "address": "Av. República del Salvador y Moscú",
+      "cityCountry": "Quito, Ecuador",
+      "phone": "+593 2 245 8899",
+      "email": "direccion@gourmetgrouplatam.com",
+      "logoUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&auto=format&fit=crop&q=80",
+      "employeeCount": "25 - 50 empleados",
+      "estimatedRevenue": "$1M - $2M anuales",
+      "notes": "Franquicia gastronómica con 3 locales. Contrataron Social Growth y producción audiovisual con Pixel 12.",
+      "tags": [
+        "Gastronomía",
+        "Cliente VIP",
+        "Contenido Frecuente"
+      ],
+      "clientStatus": "ACTIVE_CLIENT",
+      "contactIds": [
+        "cont_morales"
+      ],
+      "contractedServices": [
+        {
+          "id": "serv_gour_1",
+          "name": "Plan Social Growth & Contenido Gastronómico",
+          "type": "PLAN",
+          "monthlyPrice": 650,
+          "billingCadence": "Mensual",
+          "startDate": "2026-02-01",
+          "status": "ACTIVE",
+          "deliverables": [
+            "16 Posts y reels mensuales",
+            "Community Management diario",
+            "Reporte de interacción y promociones"
+          ]
+        }
+      ],
+      "lifetimeValue": 1300,
+      "createdAt": "2026-01-20T14:00:00.000Z",
+      "updatedAt": "2026-03-05T11:15:00.000Z"
+    },
+    {
+      "id": "comp_viteri",
+      "name": "Dr. Andrés Viteri - Cirugía Plástica & Estética",
+      "tradeName": "Dr. Andrés Viteri Clinic",
+      "taxId": "0912345678001",
+      "sector": "Medicina Estética & Cirugía",
+      "website": "https://andresviterimd.com",
+      "address": "Hospital Clínica Kennedy Alborada, Consultorio 312",
+      "cityCountry": "Guayaquil, Ecuador",
+      "phone": "+593 98 765 4321",
+      "email": "contacto@andresviterimd.com",
+      "logoUrl": "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=200&auto=format&fit=crop&q=80",
+      "employeeCount": "5 - 10 empleados",
+      "estimatedRevenue": "$600k - $1M anuales",
+      "notes": "Médico reconocido buscando internacionalizar su marca hacia pacientes de USA y Europa para turismo médico.",
+      "tags": [
+        "Medicina Estética",
+        "High Ticket",
+        "Turismo Médico",
+        "En Negociación"
+      ],
+      "clientStatus": "PROSPECT",
+      "contactIds": [
+        "cont_viteri"
+      ],
+      "contractedServices": [],
+      "lifetimeValue": 0,
+      "createdAt": "2026-02-28T16:00:00.000Z",
+      "updatedAt": "2026-03-12T10:00:00.000Z"
+    },
+    {
+      "id": "comp_finanzplus",
+      "name": "FinanzPlus Asesores Corporativos",
+      "tradeName": "FinanzPlus",
+      "taxId": "1798889991001",
+      "sector": "Finanzas & Asesoría Fiscal B2B",
+      "website": "https://finanzplus.com",
+      "address": "World Trade Center Quito, Torre Norte Of. 805",
+      "cityCountry": "Quito, Ecuador",
+      "phone": "+593 2 399 1234",
+      "email": "vcastillo@finanzplus.com",
+      "logoUrl": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200&auto=format&fit=crop&q=80",
+      "employeeCount": "15 - 30 empleados",
+      "estimatedRevenue": "$800k - $1.5M anuales",
+      "notes": "Buscan posicionamiento en LinkedIn para sus socios directores y captación de clientes corporativos mediante lead magnets B2B.",
+      "tags": [
+        "B2B",
+        "LinkedIn",
+        "Lead Calificado"
+      ],
+      "clientStatus": "PROSPECT",
+      "contactIds": [
+        "cont_castillo"
+      ],
+      "contractedServices": [],
+      "lifetimeValue": 0,
+      "createdAt": "2026-03-02T11:00:00.000Z",
+      "updatedAt": "2026-03-11T16:45:00.000Z"
+    }
+  ],
+  "crmDeals": [
+    {
+      "id": "deal_urbatec_360",
+      "title": "Plan Scale 360 Inmobiliario — Urbatec",
+      "pipelineId": "pipe_sales_360",
+      "stageId": "stage_won",
+      "contactId": "cont_valarezo",
+      "contactName": "Arq. Sebastián Valarezo",
+      "companyId": "comp_urbatec",
+      "companyName": "Constructora Urbatec S.A.",
+      "value": 1450,
+      "currency": "USD",
+      "expectedCloseDate": "2026-01-15",
+      "probability": 100,
+      "priority": "HIGH",
+      "assignedTo": "Alejandro Morales",
+      "tags": [
+        "Inmobiliaria",
+        "Scale 360",
+        "Ganado"
+      ],
+      "associatedQuoteIds": [
+        "quote_urbatec_01"
+      ],
+      "notes": "Contrato firmado por 6 meses con renovación automática.",
+      "createdAt": "2026-01-10T12:00:00.000Z",
+      "updatedAt": "2026-01-15T18:00:00.000Z"
+    },
+    {
+      "id": "deal_odonto_va",
+      "title": "Asistencia Virtual Comercial + Marketing — OdontoElite",
+      "pipelineId": "pipe_sales_360",
+      "stageId": "stage_proposal",
+      "contactId": "cont_mendoza",
+      "contactName": "Dra. Carmen Mendoza",
+      "companyId": "comp_odontoelite",
+      "companyName": "OdontoElite Clínica Dental Especializada",
+      "value": 1250,
+      "currency": "USD",
+      "expectedCloseDate": "2026-03-18",
+      "probability": 70,
+      "priority": "HIGH",
+      "assignedTo": "Alejandro Morales",
+      "tags": [
+        "Salud Dental",
+        "Cotización Enviada",
+        "Asistencia"
+      ],
+      "associatedQuoteIds": [
+        "quote_odonto_01"
+      ],
+      "notes": "Cotización P12-COT-2026-002 enviada por correo y WhatsApp. Pendiente llamada de resolución de dudas.",
+      "createdAt": "2026-02-20T10:30:00.000Z",
+      "updatedAt": "2026-03-10T14:20:00.000Z"
+    },
+    {
+      "id": "deal_viteri_luxury",
+      "title": "Branding Premium + Campaña High Ticket — Dr. Viteri",
+      "pipelineId": "pipe_sales_360",
+      "stageId": "stage_negotiation",
+      "contactId": "cont_viteri",
+      "contactName": "Dr. Andrés Viteri",
+      "companyId": "comp_viteri",
+      "companyName": "Dr. Andrés Viteri - Cirugía Plástica & Estética",
+      "value": 2200,
+      "currency": "USD",
+      "expectedCloseDate": "2026-03-16",
+      "probability": 85,
+      "priority": "HIGH",
+      "assignedTo": "Alejandro Morales",
+      "tags": [
+        "Cirugía Estética",
+        "Negociación",
+        "High Ticket"
+      ],
+      "associatedQuoteIds": [
+        "quote_viteri_01"
+      ],
+      "notes": "Aprobó el alcance conceptual, ajustando únicamente si incluimos video reels en locación de clínica.",
+      "createdAt": "2026-03-01T15:00:00.000Z",
+      "updatedAt": "2026-03-12T10:00:00.000Z"
+    },
+    {
+      "id": "deal_finanzplus_b2b",
+      "title": "Estrategia de Autoridad LinkedIn & Blog SEO — FinanzPlus",
+      "pipelineId": "pipe_sales_360",
+      "stageId": "stage_meeting",
+      "contactId": "cont_castillo",
+      "contactName": "Econ. Valeria Castillo",
+      "companyId": "comp_finanzplus",
+      "companyName": "FinanzPlus Asesores Corporativos",
+      "value": 850,
+      "currency": "USD",
+      "expectedCloseDate": "2026-03-25",
+      "probability": 50,
+      "priority": "MEDIUM",
+      "assignedTo": "Alejandro Morales",
+      "tags": [
+        "B2B",
+        "LinkedIn",
+        "SEO"
+      ],
+      "associatedQuoteIds": [],
+      "notes": "Reunión de diagnóstico agendada para el jueves 10:00 AM.",
+      "createdAt": "2026-03-03T11:20:00.000Z",
+      "updatedAt": "2026-03-11T16:45:00.000Z"
+    },
+    {
+      "id": "deal_gourmet_upsell",
+      "title": "Pauta Publicitaria Meta Ads (Apertura Cumbayá) — Gourmet Group",
+      "pipelineId": "pipe_sales_360",
+      "stageId": "stage_contacted",
+      "contactId": "cont_morales",
+      "contactName": "Ing. Rodrigo Morales",
+      "companyId": "comp_gourmet",
+      "companyName": "Gourmet Group Latam",
+      "value": 500,
+      "currency": "USD",
+      "expectedCloseDate": "2026-03-28",
+      "probability": 30,
+      "priority": "MEDIUM",
+      "assignedTo": "Alejandro Morales",
+      "tags": [
+        "Gastronomía",
+        "Up-sell",
+        "Ads"
+      ],
+      "associatedQuoteIds": [],
+      "notes": "Conversación informal por WhatsApp. Solicitó propuesta puntual de fee de gestión publicitaria.",
+      "createdAt": "2026-03-08T09:15:00.000Z",
+      "updatedAt": "2026-03-10T12:00:00.000Z"
+    }
+  ],
+  "crmPipelines": [
+    {
+      "id": "pipe_sales_360",
+      "name": "Ventas Digitales & Clientes 360 (Principal)",
+      "description": "Pipeline maestro para captación, diagnóstico y cierre de cuentas de marketing y asistencia virtual.",
+      "isDefault": true,
+      "stages": [
+        {
+          "id": "stage_new",
+          "name": "Nuevo Lead",
+          "color": "#3B82F6",
+          "order": 1,
+          "probability": 10,
+          "winState": "OPEN"
+        },
+        {
+          "id": "stage_contacted",
+          "name": "Contactado / Calificado",
+          "color": "#EAB308",
+          "order": 2,
+          "probability": 25,
+          "winState": "OPEN"
+        },
+        {
+          "id": "stage_meeting",
+          "name": "Discovery / Diagnóstico",
+          "color": "#8B5CF6",
+          "order": 3,
+          "probability": 50,
+          "winState": "OPEN"
+        },
+        {
+          "id": "stage_proposal",
+          "name": "Propuesta / Cotización",
+          "color": "#F97316",
+          "order": 4,
+          "probability": 70,
+          "winState": "OPEN"
+        },
+        {
+          "id": "stage_negotiation",
+          "name": "Negociación Final",
+          "color": "#EC4899",
+          "order": 5,
+          "probability": 85,
+          "winState": "OPEN"
+        },
+        {
+          "id": "stage_won",
+          "name": "Cerrado Ganado ⭐",
+          "color": "#10B981",
+          "order": 6,
+          "probability": 100,
+          "winState": "WON"
+        },
+        {
+          "id": "stage_lost",
+          "name": "Cerrado Perdido",
+          "color": "#64748B",
+          "order": 7,
+          "probability": 0,
+          "winState": "LOST"
+        }
+      ],
+      "createdAt": "2026-01-10T10:00:00.000Z"
+    },
+    {
+      "id": "pipe_virtual_assistant",
+      "name": "Asistencia Virtual & Operaciones BPO",
+      "description": "Flujo específico para colocación y retención de asistentes virtuales y delegación operativa.",
+      "isDefault": false,
+      "stages": [
+        {
+          "id": "va_inquiry",
+          "name": "Consulta Recibida",
+          "color": "#3B82F6",
+          "order": 1,
+          "probability": 15,
+          "winState": "OPEN"
+        },
+        {
+          "id": "va_diag",
+          "name": "Diagnóstico de Procesos",
+          "color": "#8B5CF6",
+          "order": 2,
+          "probability": 40,
+          "winState": "OPEN"
+        },
+        {
+          "id": "va_matching",
+          "name": "Entrevista de Matching",
+          "color": "#F97316",
+          "order": 3,
+          "probability": 65,
+          "winState": "OPEN"
+        },
+        {
+          "id": "va_trial",
+          "name": "Onboarding & Prueba (7 días)",
+          "color": "#EC4899",
+          "order": 4,
+          "probability": 85,
+          "winState": "OPEN"
+        },
+        {
+          "id": "va_active",
+          "name": "Contrato Activo Recurrente",
+          "color": "#10B981",
+          "order": 5,
+          "probability": 100,
+          "winState": "WON"
+        },
+        {
+          "id": "va_cancelled",
+          "name": "Cancelado",
+          "color": "#64748B",
+          "order": 6,
+          "probability": 0,
+          "winState": "LOST"
+        }
+      ],
+      "createdAt": "2026-02-01T10:00:00.000Z"
+    }
+  ],
+  "crmActivities": [
+    {
+      "id": "act_1",
+      "entityType": "DEAL",
+      "entityId": "deal_viteri_luxury",
+      "type": "STAGE_CHANGE",
+      "title": "Movido a Negociación Final",
+      "description": "El cliente confirmó interés definitivo tras recibir la presentación ejecutiva con estética Pixel 12.",
+      "authorName": "Alejandro Morales",
+      "timestamp": "2026-03-12T10:00:00.000Z"
+    },
+    {
+      "id": "act_2",
+      "entityType": "CONTACT",
+      "entityId": "cont_mendoza",
+      "type": "QUOTE_CREATED",
+      "title": "Cotización P12-COT-2026-002 generada",
+      "description": "Propuesta generada para Asistencia Virtual + Gestión de Redes por $1,250/mes.",
+      "authorName": "Alejandro Morales",
+      "timestamp": "2026-03-10T14:20:00.000Z"
+    },
+    {
+      "id": "act_3",
+      "entityType": "CONTACT",
+      "entityId": "cont_valarezo",
+      "type": "SERVICE_ACTIVATED",
+      "title": "Servicio Plan Scale 360 activado",
+      "description": "Onboarding completado e integración de Asistente Virtual a los canales de Urbatec.",
+      "authorName": "Alejandro Morales",
+      "timestamp": "2026-01-15T18:00:00.000Z"
+    }
+  ],
+  "crmFollowUps": [
+    {
+      "id": "fu_1",
+      "dealId": "deal_odonto_va",
+      "contactId": "cont_mendoza",
+      "companyId": "comp_odontoelite",
+      "contactName": "Dra. Carmen Mendoza",
+      "companyName": "OdontoElite Clínica Dental Especializada",
+      "title": "Llamada de seguimiento a cotización P12-COT-2026-002",
+      "channel": "WHATSAPP",
+      "dueDate": "2026-03-14",
+      "dueTime": "11:00",
+      "status": "PENDING",
+      "priority": "HIGH",
+      "notes": "Preguntar si pudieron revisar los entregables de la asistente virtual y el setup de CRM.",
+      "assignedTo": "Alejandro Morales",
+      "createdAt": "2026-03-10T14:30:00.000Z"
+    },
+    {
+      "id": "fu_2",
+      "dealId": "deal_viteri_luxury",
+      "contactId": "cont_viteri",
+      "companyId": "comp_viteri",
+      "contactName": "Dr. Andrés Viteri",
+      "companyName": "Dr. Andrés Viteri - Cirugía Plástica & Estética",
+      "title": "Enviar acuerdo de inicio y link de pago de anticipo",
+      "channel": "EMAIL",
+      "dueDate": "2026-03-15",
+      "dueTime": "16:00",
+      "status": "PENDING",
+      "priority": "HIGH",
+      "notes": "Confirmar si requiere factura a nombre personal o de la clínica.",
+      "assignedTo": "Alejandro Morales",
+      "createdAt": "2026-03-12T10:15:00.000Z"
+    },
+    {
+      "id": "fu_3",
+      "dealId": "deal_finanzplus_b2b",
+      "contactId": "cont_castillo",
+      "companyId": "comp_finanzplus",
+      "contactName": "Econ. Valeria Castillo",
+      "companyName": "FinanzPlus Asesores Corporativos",
+      "title": "Discovery Call por Google Meet",
+      "channel": "MEETING",
+      "dueDate": "2026-03-16",
+      "dueTime": "10:00",
+      "status": "PENDING",
+      "priority": "MEDIUM",
+      "notes": "Presentar casos de éxito B2B de Pixel 12 en LinkedIn.",
+      "assignedTo": "Alejandro Morales",
+      "createdAt": "2026-03-11T17:00:00.000Z"
+    },
+    {
+      "id": "fu_4",
+      "dealId": "deal_urbatec_360",
+      "contactId": "cont_valarezo",
+      "companyId": "comp_urbatec",
+      "contactName": "Arq. Sebastián Valarezo",
+      "companyName": "Constructora Urbatec S.A.",
+      "title": "Reunión mensual de balance de pauta y leads calificados",
+      "channel": "MEETING",
+      "dueDate": "2026-03-20",
+      "dueTime": "15:30",
+      "status": "PENDING",
+      "priority": "HIGH",
+      "notes": "Mostrar reporte con 48 prospectos generados y 3 ventas de departamentos cerradas.",
+      "assignedTo": "Alejandro Morales",
+      "createdAt": "2026-03-01T16:00:00.000Z"
+    }
+  ]
+}

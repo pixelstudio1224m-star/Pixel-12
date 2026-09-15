@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Connection test document
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+
+    // User profiles - Accessible for app authentication and user profile sync
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Workspaces and operations - Agency CRM, quotes, calendar & posts
+    match /workspaces/{workspaceId} {
+      allow read, write: if true;
+
+      match /{subcollection=**} {
+        allow read, write: if true;
+      }
+    }
+
+    // Catch-all default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

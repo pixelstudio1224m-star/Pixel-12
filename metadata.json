@@ -1,0 +1,6 @@
+{
+  "name": "PIXEL 12 OS",
+  "description": "AI Social Media, Content & Team Management OS para la agencia Pixel 12. Tu contenido, tu equipo, tus redes, todo en un solo lugar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
