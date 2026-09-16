@@ -192,9 +192,23 @@ export const Sidebar: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col gap-3 border-b border-[#222232]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg p12-gold-gradient flex items-center justify-center font-black text-black text-xs shadow-md shadow-[#D4AF37]/20 shrink-0 tracking-tighter">
-                P12
-              </div>
+              {data.workspaceSettings.brandIdentity?.officialLogoUrl ? (
+                <div className="h-8 max-w-[120px] flex items-center justify-center shrink-0">
+                  <img
+                    src={data.workspaceSettings.brandIdentity.officialLogoUrl}
+                    alt="Pixel 12 OS"
+                    className="max-h-8 max-w-full object-contain filter drop-shadow-[0_2px_6px_rgba(212,175,55,0.25)]"
+                    onError={(e) => {
+                      // Fallback to emblem if image fails
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-lg p12-gold-gradient flex items-center justify-center font-black text-black text-xs shadow-md shadow-[#D4AF37]/20 shrink-0 tracking-tighter">
+                  P12
+                </div>
+              )}
               <div className="flex flex-col min-w-0">
                 <span className="font-extrabold text-base tracking-tight p12-silver-text leading-none font-display">
                   PIXEL 12 OS

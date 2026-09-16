@@ -18,8 +18,10 @@ import {
   X,
   Layers,
   Coins,
-  ArrowRight
+  ArrowRight,
+  Building2
 } from 'lucide-react';
+import { ScheduleContentModal } from '../components/calendar/ScheduleContentModal';
 
 export const ContentCalendarView: React.FC = () => {
   const { data, activeBrand, openPostDetail, openManualPost, openCreateWithAI, updatePost, showToast } =
@@ -29,7 +31,10 @@ export const ContentCalendarView: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(8); // 8 = September (0-indexed)
   const [formatFilter, setFormatFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [brandFilter, setBrandFilter] = useState<string>('ALL'); // 'ALL' or specific brandId
   const [viewMode, setViewMode] = useState<'month' | 'list'>('month');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleModalDate, setScheduleModalDate] = useState<string>('');
   const [selectedDayModal, setSelectedDayModal] = useState<{
     dayNumber: number;
     dateString: string;
@@ -72,11 +77,12 @@ export const ContentCalendarView: React.FC = () => {
   // Filter posts
   const filteredPosts = useMemo(() => {
     return data.posts.filter((p) => {
+      if (brandFilter !== 'ALL' && p.brandId !== brandFilter) return false;
       if (formatFilter !== 'ALL' && p.format !== formatFilter) return false;
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
       return true;
     });
-  }, [data.posts, formatFilter, statusFilter]);
+  }, [data.posts, brandFilter, formatFilter, statusFilter]);
 
   // Calendar Grid Calculation (Monday to Sunday)
   const calendarDays = useMemo(() => {
@@ -208,6 +214,24 @@ export const ContentCalendarView: React.FC = () => {
 
         {/* Filters & Actions */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Brand/Client Filter */}
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1">
+            <Building2 className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <select
+              aria-label="Filtrar por cliente"
+              value={brandFilter}
+              onChange={(e) => setBrandFilter(e.target.value)}
+              className="text-xs font-semibold bg-transparent outline-none text-slate-800"
+            >
+              <option value="ALL">Todas las Marcas</option>
+              {data.brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Format filter */}
           <select
             aria-label="Filtrar por formato"
@@ -259,18 +283,21 @@ export const ContentCalendarView: React.FC = () => {
           </div>
 
           <button
-            onClick={openManualPost}
-            className="hidden sm:flex px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors items-center gap-1 cursor-pointer"
+            onClick={() => {
+              setScheduleModalDate('');
+              setIsScheduleModalOpen(true);
+            }}
+            className="px-3.5 py-1.5 text-xs font-bold rounded-xl p12-gold-gradient text-black shadow-xs flex items-center gap-1.5 hover:brightness-105 active:scale-95 transition-all cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Manual</span>
+            <Plus className="w-3.5 h-3.5 text-black" />
+            <span>Programar</span>
           </button>
 
           <button
             onClick={openCreateWithAI}
-            className="px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-sky-600 via-indigo-600 to-orange-500 text-white shadow-xs flex items-center gap-1.5 hover:from-sky-500 hover:to-orange-400 active:scale-95 transition-all cursor-pointer"
+            className="hidden sm:flex px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 text-white shadow-xs items-center gap-1.5 hover:bg-slate-800 transition-all cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
             <span>Crear IA</span>
           </button>
         </div>
@@ -304,11 +331,14 @@ export const ContentCalendarView: React.FC = () => {
                         dateString: cell.dateString,
                         posts: cell.posts
                       });
+                    } else if (cell.isCurrentMonth) {
+                      setScheduleModalDate(cell.dateString);
+                      setIsScheduleModalOpen(true);
                     }
                   }}
-                  className={`min-h-[90px] sm:min-h-[110px] md:min-h-[130px] p-1.5 sm:p-2 flex flex-col justify-between transition-colors group relative ${
+                  className={`min-h-[90px] sm:min-h-[110px] md:min-h-[130px] p-1.5 sm:p-2 flex flex-col justify-between transition-colors group relative cursor-pointer ${
                     cell.isCurrentMonth ? 'bg-white hover:bg-slate-50/80' : 'bg-slate-50/70 opacity-50'
-                  } ${hasPosts ? 'cursor-pointer hover:ring-1 hover:ring-orange-300' : ''}`}
+                  } ${hasPosts ? 'hover:ring-1 hover:ring-[#D4AF37]' : ''}`}
                 >
                   {/* Cell Day Header */}
                   <div className="flex items-center justify-between mb-1">
@@ -316,7 +346,7 @@ export const ContentCalendarView: React.FC = () => {
                       <span
                         className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full transition-transform group-hover:scale-105 ${
                           isToday
-                            ? 'bg-sky-600 text-white shadow-xs'
+                            ? 'p12-gold-gradient text-black shadow-xs font-black'
                             : cell.isCurrentMonth
                             ? 'text-slate-800'
                             : 'text-slate-400'
@@ -326,7 +356,7 @@ export const ContentCalendarView: React.FC = () => {
                       </span>
                       {hasPosts && (
                         <span className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                          Ver día
+                          Ver ({cell.posts.length})
                         </span>
                       )}
                     </div>
@@ -336,10 +366,11 @@ export const ContentCalendarView: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          openManualPost();
+                          setScheduleModalDate(cell.dateString);
+                          setIsScheduleModalOpen(true);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-sky-600 hover:bg-slate-100 rounded transition-all"
-                        title="Añadir publicación en este día"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-black hover:bg-[#D4AF37] rounded transition-all cursor-pointer"
+                        title="Programar contenido en este día"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -584,9 +615,18 @@ export const ContentCalendarView: React.FC = () => {
 
             {/* Modal Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                Créditos IA: <strong>{data.workspaceSettings.aiCredits ?? 120}</strong> disponibles
-              </span>
+              <button
+                onClick={() => {
+                  const dayDate = selectedDayModal.dateString;
+                  setSelectedDayModal(null);
+                  setScheduleModalDate(dayDate);
+                  setIsScheduleModalOpen(true);
+                }}
+                className="px-3.5 py-1.5 rounded-xl p12-gold-gradient text-black text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-black" />
+                <span>Programar en este día</span>
+              </button>
               <button
                 onClick={() => setSelectedDayModal(null)}
                 className="px-4 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
@@ -597,6 +637,19 @@ export const ContentCalendarView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Central Content Scheduling Modal */}
+      <ScheduleContentModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        initialData={{
+          date: scheduleModalDate,
+          brandId: brandFilter !== 'ALL' ? brandFilter : activeBrand.id,
+        }}
+        onScheduled={() => {
+          showToast('Publicación y tarea programadas con éxito en el calendario', 'success');
+        }}
+      />
     </div>
   );
 };

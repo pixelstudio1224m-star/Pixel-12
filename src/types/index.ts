@@ -82,10 +82,32 @@ export interface Member {
   role: Role;
   title?: string;
   status: 'active' | 'invited' | 'inactive';
+  invitedAt?: string;
+  invitedBy?: string;
+  deactivatedAt?: string;
 }
 
 export type TeamRole = Role;
 export type TeamMember = Member;
+
+export interface TeamInvitation {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  token: string;
+  status: 'pending' | 'accepted' | 'expired' | 'revoked';
+  invitedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string;
+  emailSent: boolean;
+  emailDeliveryError?: string;
+}
 
 export interface BrandVoice {
   tone: string;
@@ -242,7 +264,7 @@ export interface Task {
   createdAt: string;
 }
 
-export type CampaignStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'PAUSED';
+export type CampaignStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'PAUSED' | 'ARCHIVED';
 
 export interface Campaign {
   id: string;
@@ -260,8 +282,12 @@ export interface Campaign {
   status: CampaignStatus;
   postIds: string[];
   taskIds: string[];
+  quoteIds?: string[];
+  services?: string[];
   memberIds?: string[];
   createdAt?: string;
+  archivedAt?: string;
+  notes?: string;
 }
 
 export interface SocialAccount {
@@ -325,6 +351,17 @@ export interface AuditLog {
   timestamp: string;
 }
 
+export interface BrandIdentityConfig {
+  officialLogoUrl?: string;
+  logoDarkUrl?: string;
+  logoLightUrl?: string;
+  faviconUrl?: string;
+  brandName?: string;
+  primaryColor?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface WorkspaceSettings {
   workspaceName: string;
   agencyType: string;
@@ -335,6 +372,7 @@ export interface WorkspaceSettings {
   notifyOnApprovalNeeded: boolean;
   notifyOnScheduleFailure: boolean;
   aiCredits?: number;
+  brandIdentity?: BrandIdentityConfig;
 }
 
 export interface WorkspaceData {
@@ -362,6 +400,7 @@ export interface WorkspaceData {
   crmPipelines?: CrmPipeline[];
   crmActivities?: CrmActivity[];
   crmFollowUps?: CrmFollowUp[];
+  invitations?: TeamInvitation[];
 }
 
 export interface BlogSEOCheck {

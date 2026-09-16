@@ -4,6 +4,7 @@ import {
   Post,
   Task,
   Campaign,
+  CampaignStatus,
   Brand,
   PostStatus,
   TaskStatus,
@@ -144,9 +145,13 @@ interface WorkspaceContextType {
   // Campaign Operations
   addCampaign: (campaign: Campaign) => Promise<void>;
   updateCampaign: (campaign: Campaign) => Promise<void>;
+  deleteCampaign: (campaignId: string) => Promise<void>;
+  archiveCampaign: (campaignId: string) => Promise<void>;
+  restoreCampaign: (campaignId: string) => Promise<void>;
   // Brand Operations
   addBrand: (brand: Brand) => Promise<void>;
   updateBrand: (brand: Brand) => Promise<void>;
+  deleteBrand: (brandId: string) => Promise<void>;
   // Settings
   updateSettings: (settings: Partial<WorkspaceData['workspaceSettings']>) => Promise<void>;
   // Modals
@@ -264,6 +269,7 @@ interface WorkspaceContextType {
   commercialAIInitialData: any;
   openCommercialAI: (initialData?: any) => void;
   closeCommercialAI: () => void;
+  reloadWorkspaceData: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -388,37 +394,37 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       .then((ws) => {
         if (isMounted) {
           setData(ws);
-          if (ws.quotes && Array.isArray(ws.quotes) && ws.quotes.length > 0) {
+          if (ws.quotes && Array.isArray(ws.quotes)) {
             setQuotes(ws.quotes);
           }
-          if (ws.plans && Array.isArray(ws.plans) && ws.plans.length > 0) {
+          if (ws.plans && Array.isArray(ws.plans)) {
             setPlans(ws.plans);
           }
-          if (ws.customServices && Array.isArray(ws.customServices) && ws.customServices.length > 0) {
+          if (ws.customServices && Array.isArray(ws.customServices)) {
             setCustomServices(ws.customServices);
           }
           if (ws.commercialSettings) {
             setCommercialSettings(ws.commercialSettings);
           }
-          if (ws.imageLibrary && Array.isArray(ws.imageLibrary) && ws.imageLibrary.length > 0) {
+          if (ws.imageLibrary && Array.isArray(ws.imageLibrary)) {
             setImageLibrary(ws.imageLibrary);
           }
-          if (ws.crmContacts && Array.isArray(ws.crmContacts) && ws.crmContacts.length > 0) {
+          if (ws.crmContacts && Array.isArray(ws.crmContacts)) {
             setCrmContacts(ws.crmContacts);
           }
-          if (ws.crmCompanies && Array.isArray(ws.crmCompanies) && ws.crmCompanies.length > 0) {
+          if (ws.crmCompanies && Array.isArray(ws.crmCompanies)) {
             setCrmCompanies(ws.crmCompanies);
           }
-          if (ws.crmDeals && Array.isArray(ws.crmDeals) && ws.crmDeals.length > 0) {
+          if (ws.crmDeals && Array.isArray(ws.crmDeals)) {
             setCrmDeals(ws.crmDeals);
           }
-          if (ws.crmPipelines && Array.isArray(ws.crmPipelines) && ws.crmPipelines.length > 0) {
+          if (ws.crmPipelines && Array.isArray(ws.crmPipelines)) {
             setCrmPipelines(ws.crmPipelines);
           }
-          if (ws.crmActivities && Array.isArray(ws.crmActivities) && ws.crmActivities.length > 0) {
+          if (ws.crmActivities && Array.isArray(ws.crmActivities)) {
             setCrmActivities(ws.crmActivities);
           }
-          if (ws.crmFollowUps && Array.isArray(ws.crmFollowUps) && ws.crmFollowUps.length > 0) {
+          if (ws.crmFollowUps && Array.isArray(ws.crmFollowUps)) {
             setCrmFollowUps(ws.crmFollowUps);
           }
           if (ws.blogPosts && Array.isArray(ws.blogPosts) && ws.blogPosts.length > 0) {
@@ -449,6 +455,29 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const persistState = useCallback(async (updated: WorkspaceData) => {
     setData(updated);
     await saveWorkspace(updated);
+  }, []);
+
+  const reloadWorkspaceData = useCallback(async () => {
+    try {
+      const ws = await getWorkspace();
+      if (ws) {
+        setData(ws);
+        if (ws.quotes && Array.isArray(ws.quotes)) setQuotes(ws.quotes);
+        if (ws.plans && Array.isArray(ws.plans)) setPlans(ws.plans);
+        if (ws.customServices && Array.isArray(ws.customServices)) setCustomServices(ws.customServices);
+        if (ws.commercialSettings) setCommercialSettings(ws.commercialSettings);
+        if (ws.imageLibrary && Array.isArray(ws.imageLibrary)) setImageLibrary(ws.imageLibrary);
+        if (ws.crmContacts && Array.isArray(ws.crmContacts)) setCrmContacts(ws.crmContacts);
+        if (ws.crmCompanies && Array.isArray(ws.crmCompanies)) setCrmCompanies(ws.crmCompanies);
+        if (ws.crmDeals && Array.isArray(ws.crmDeals)) setCrmDeals(ws.crmDeals);
+        if (ws.crmPipelines && Array.isArray(ws.crmPipelines)) setCrmPipelines(ws.crmPipelines);
+        if (ws.crmActivities && Array.isArray(ws.crmActivities)) setCrmActivities(ws.crmActivities);
+        if (ws.crmFollowUps && Array.isArray(ws.crmFollowUps)) setCrmFollowUps(ws.crmFollowUps);
+        if (ws.blogPosts && Array.isArray(ws.blogPosts)) setBlogPosts(ws.blogPosts);
+      }
+    } catch (e) {
+      console.warn('Error reloading workspace:', e);
+    }
   }, []);
 
   const activeBrand =
@@ -771,6 +800,65 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [data, persistState, showToast]
   );
 
+  const deleteCampaign = useCallback(
+    async (campaignId: string) => {
+      const target = data.campaigns.find((c) => c.id === campaignId);
+      const updated: WorkspaceData = {
+        ...data,
+        campaigns: data.campaigns.filter((c) => c.id !== campaignId),
+        // Detach related posts from deleted campaign
+        posts: data.posts.map((p) => (p.campaignId === campaignId ? { ...p, campaignId: undefined, campaignName: undefined } : p)),
+        // Detach related tasks from deleted campaign
+        tasks: data.tasks.map((t) => (t.relatedCampaignId === campaignId ? { ...t, relatedCampaignId: undefined, relatedCampaignName: undefined } : t)),
+        auditLogs: [
+          {
+            id: 'log_' + Date.now(),
+            actorName: data.currentMember.name,
+            action: 'Eliminó proyecto / campaña',
+            entityType: 'campaign',
+            entityId: campaignId,
+            details: `Eliminó el proyecto "${target?.name || campaignId}" sin afectar a otros clientes`,
+            timestamp: new Date().toISOString(),
+          },
+          ...data.auditLogs,
+        ],
+      };
+      await persistState(updated);
+      showToast(`Proyecto "${target?.name || ''}" eliminado correctamente`);
+    },
+    [data, persistState, showToast]
+  );
+
+  const archiveCampaign = useCallback(
+    async (campaignId: string) => {
+      const target = data.campaigns.find((c) => c.id === campaignId);
+      const updated: WorkspaceData = {
+        ...data,
+        campaigns: data.campaigns.map((c) =>
+          c.id === campaignId ? { ...c, status: 'ARCHIVED' as CampaignStatus, archivedAt: new Date().toISOString() } : c
+        ),
+      };
+      await persistState(updated);
+      showToast(`Proyecto "${target?.name || ''}" archivado`);
+    },
+    [data, persistState, showToast]
+  );
+
+  const restoreCampaign = useCallback(
+    async (campaignId: string) => {
+      const target = data.campaigns.find((c) => c.id === campaignId);
+      const updated: WorkspaceData = {
+        ...data,
+        campaigns: data.campaigns.map((c) =>
+          c.id === campaignId ? { ...c, status: 'ACTIVE' as CampaignStatus, archivedAt: undefined } : c
+        ),
+      };
+      await persistState(updated);
+      showToast(`Proyecto "${target?.name || ''}" restaurado a estado activo`);
+    },
+    [data, persistState, showToast]
+  );
+
   // Brand Operations
   const addBrand = useCallback(
     async (brand: Brand) => {
@@ -793,6 +881,39 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
       await persistState(updated);
       showToast('Datos de marca actualizados');
+    },
+    [data, persistState, showToast]
+  );
+
+  const deleteBrand = useCallback(
+    async (brandId: string) => {
+      if (data.brands.length <= 1) {
+        showToast('No puedes eliminar la única marca del espacio de trabajo', 'error');
+        return;
+      }
+      const targetBrand = data.brands.find((b) => b.id === brandId);
+      const remainingBrands = data.brands.filter((b) => b.id !== brandId);
+      const newActiveId = data.activeBrandId === brandId ? remainingBrands[0].id : data.activeBrandId;
+
+      const updated: WorkspaceData = {
+        ...data,
+        brands: remainingBrands,
+        activeBrandId: newActiveId,
+        auditLogs: [
+          {
+            id: 'log_' + Date.now(),
+            actorName: data.currentMember.name,
+            action: 'Eliminó cliente / marca',
+            entityType: 'settings',
+            entityId: brandId,
+            details: `Eliminó la marca "${targetBrand?.name || brandId}"`,
+            timestamp: new Date().toISOString(),
+          },
+          ...data.auditLogs,
+        ],
+      };
+      await persistState(updated);
+      showToast(`Cliente "${targetBrand?.name || ''}" eliminado del workspace`);
     },
     [data, persistState, showToast]
   );
@@ -1804,8 +1925,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         changeTaskStatus,
         addCampaign,
         updateCampaign,
+        deleteCampaign,
+        archiveCampaign,
+        restoreCampaign,
         addBrand,
         updateBrand,
+        deleteBrand,
         updateSettings,
         isCreateWithAIOpen,
         openCreateWithAI: () => setIsCreateWithAIOpen(true),
@@ -1895,6 +2020,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         commercialAIInitialData,
         openCommercialAI,
         closeCommercialAI,
+        reloadWorkspaceData,
       }}
     >
       {children}

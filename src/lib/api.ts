@@ -16,13 +16,40 @@ import {
 import { initialWorkspaceData } from './defaultData';
 import { getWorkspaceFromFirestore, saveWorkspaceToFirestore } from './firebase';
 
+export function sanitizeWorkspaceData(data: Partial<WorkspaceData> | null | undefined): WorkspaceData {
+  if (!data) return initialWorkspaceData;
+  return {
+    ...initialWorkspaceData,
+    ...data,
+    brands: Array.isArray(data.brands) && data.brands.length > 0 ? data.brands : initialWorkspaceData.brands,
+    members: Array.isArray(data.members) && data.members.length > 0 ? data.members : initialWorkspaceData.members,
+    posts: Array.isArray(data.posts) ? data.posts : (initialWorkspaceData.posts || []),
+    tasks: Array.isArray(data.tasks) ? data.tasks : (initialWorkspaceData.tasks || []),
+    campaigns: Array.isArray(data.campaigns) ? data.campaigns : (initialWorkspaceData.campaigns || []),
+    notifications: Array.isArray(data.notifications) ? data.notifications : (initialWorkspaceData.notifications || []),
+    invitations: Array.isArray(data.invitations) ? data.invitations : [],
+    quotes: Array.isArray(data.quotes) ? data.quotes : (initialWorkspaceData.quotes || []),
+    plans: Array.isArray(data.plans) ? data.plans : (initialWorkspaceData.plans || []),
+    customServices: Array.isArray(data.customServices) ? data.customServices : (initialWorkspaceData.customServices || []),
+    crmContacts: Array.isArray(data.crmContacts) ? data.crmContacts : (initialWorkspaceData.crmContacts || []),
+    crmCompanies: Array.isArray(data.crmCompanies) ? data.crmCompanies : (initialWorkspaceData.crmCompanies || []),
+    crmDeals: Array.isArray(data.crmDeals) ? data.crmDeals : (initialWorkspaceData.crmDeals || []),
+    crmPipelines: Array.isArray(data.crmPipelines) ? data.crmPipelines : (initialWorkspaceData.crmPipelines || []),
+    crmFollowUps: Array.isArray(data.crmFollowUps) ? data.crmFollowUps : (initialWorkspaceData.crmFollowUps || []),
+    crmActivities: Array.isArray(data.crmActivities) ? data.crmActivities : (initialWorkspaceData.crmActivities || []),
+    blogPosts: Array.isArray(data.blogPosts) ? data.blogPosts : (initialWorkspaceData.blogPosts || []),
+    auditLogs: Array.isArray(data.auditLogs) ? data.auditLogs : (initialWorkspaceData.auditLogs || []),
+  };
+}
+
 export async function getWorkspace(): Promise<WorkspaceData> {
   // 1. First attempt: Read primary live data from Firebase Firestore
   try {
     const firestoreData = await getWorkspaceFromFirestore();
     if (firestoreData && firestoreData.brands && firestoreData.brands.length > 0) {
-      localStorage.setItem('pixel12_workspace_cache', JSON.stringify(firestoreData));
-      return firestoreData;
+      const sanitized = sanitizeWorkspaceData(firestoreData);
+      localStorage.setItem('pixel12_workspace_cache', JSON.stringify(sanitized));
+      return sanitized;
     }
   } catch (err) {
     console.warn('[Firestore] Error reading from primary cloud database:', err);
@@ -34,12 +61,13 @@ export async function getWorkspace(): Promise<WorkspaceData> {
     if (res.ok) {
       const serverData: WorkspaceData = await res.json();
       if (serverData && serverData.brands) {
+        const sanitized = sanitizeWorkspaceData(serverData);
         // Safe auto-migration to Firestore so cloud database is populated
-        saveWorkspaceToFirestore(serverData).catch((e) =>
+        saveWorkspaceToFirestore(sanitized).catch((e) =>
           console.warn('[Migration] Could not auto-sync server data to Firestore:', e)
         );
-        localStorage.setItem('pixel12_workspace_cache', JSON.stringify(serverData));
-        return serverData;
+        localStorage.setItem('pixel12_workspace_cache', JSON.stringify(sanitized));
+        return sanitized;
       }
     }
   } catch (err) {
@@ -50,7 +78,7 @@ export async function getWorkspace(): Promise<WorkspaceData> {
   const local = localStorage.getItem('pixel12_workspace_cache');
   if (local) {
     try {
-      return JSON.parse(local);
+      return sanitizeWorkspaceData(JSON.parse(local));
     } catch (e) {
       // ignore
     }
@@ -699,6 +727,132 @@ export async function generateCommercialAIApi(
   }
   return await res.json();
 }
+
+// ---------------- GESTIÓN DE EQUIPO & INVITACIONES (CLIENTE) ----------------
+
+export interface InviteMemberResponse {
+  success: boolean;
+  emailSent: boolean;
+  emailDeliveryError?: string;
+  inviteUrl: string;
+  token: string;
+  message?: string;
+}
+
+export async function inviteTeamMemberApi(payload: {
+  email: string;
+  name: string;
+  role: string;
+  invitedBy?: { id: string; name: string; email: string };
+}): Promise<InviteMemberResponse> {
+  const res = await fetch('/api/team/invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al enviar la invitación');
+  }
+  return data;
+}
+
+export async function resendTeamInvitationApi(payload: {
+  memberId?: string;
+  email?: string;
+}): Promise<InviteMemberResponse> {
+  const res = await fetch('/api/team/resend-invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al reenviar la invitación');
+  }
+  return data;
+}
+
+export async function deactivateTeamMemberApi(memberId: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch('/api/team/deactivate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memberId })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al desactivar el miembro');
+  }
+  return data;
+}
+
+export async function reactivateTeamMemberApi(memberId: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch('/api/team/reactivate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memberId })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al reactivar el miembro');
+  }
+  return data;
+}
+
+export async function verifyInvitationTokenApi(token: string): Promise<{
+  valid: boolean;
+  reason?: string;
+  message?: string;
+  invitation?: {
+    email: string;
+    name: string;
+    role: string;
+    expiresAt: string;
+    invitedBy: { id: string; name: string; email: string };
+  };
+}> {
+  const res = await fetch(`/api/invitations/verify?token=${encodeURIComponent(token)}`);
+  return await res.json();
+}
+
+export async function acceptTeamInvitationApi(payload: {
+  token: string;
+  password: string;
+  displayName: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  user: { uid: string; email: string; displayName: string; role: string };
+}> {
+  const res = await fetch('/api/invitations/accept', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al aceptar la invitación');
+  }
+  return data;
+}
+
+export async function checkAccountAccessApi(email: string): Promise<{
+  allowed: boolean;
+  reason?: string;
+  message?: string;
+}> {
+  try {
+    const res = await fetch('/api/auth/check-access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    return await res.json();
+  } catch (e) {
+    return { allowed: true };
+  }
+}
+
 
 
 

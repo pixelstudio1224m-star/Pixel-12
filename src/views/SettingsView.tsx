@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { saveWorkspaceToFirestore } from '../lib/firebase';
@@ -16,7 +16,13 @@ import {
   RefreshCw,
   UserCheck,
   LogOut,
-  Server
+  Server,
+  Upload,
+  Image as ImageIcon,
+  Check,
+  ExternalLink,
+  Layers,
+  Palette
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -28,14 +34,65 @@ export const SettingsView: React.FC = () => {
   const [autoDelete, setAutoDelete] = useState(data.workspaceSettings.autoDeleteRejectedPosts);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  // Brand Identity / Logo State
+  const currentLogo = data.workspaceSettings.brandIdentity?.officialLogoUrl || '';
+  const [logoPreview, setLogoPreview] = useState<string>(currentLogo);
+  const [logoUrlInput, setLogoUrlInput] = useState<string>(currentLogo);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Por favor selecciona un archivo de imagen válido (PNG, SVG, JPG, WebP)', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('La imagen excede el límite de 5MB', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setLogoPreview(result);
+      setLogoUrlInput(result);
+      showToast('Logo cargado. Recuerda hacer clic en "Guardar Identidad y Ajustes".', 'info');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyLogoUrl = () => {
+    if (!logoUrlInput.trim()) {
+      showToast('Ingresa una URL válida', 'error');
+      return;
+    }
+    setLogoPreview(logoUrlInput.trim());
+    showToast('Vista previa de URL actualizada', 'info');
+  };
+
+  const handleResetLogoToDefault = () => {
+    setLogoPreview('');
+    setLogoUrlInput('');
+    showToast('Se restablecerá el emblema nativo de Pixel 12 al guardar', 'info');
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings({
+    await updateSettings({
       timezone,
       agencyType,
       autoDeleteRejectedPosts: autoDelete,
+      brandIdentity: {
+        ...data.workspaceSettings.brandIdentity,
+        officialLogoUrl: logoPreview.trim() || undefined,
+        updatedAt: new Date().toISOString(),
+        updatedBy: profile?.displayName || user?.displayName || 'Admin',
+      },
     });
-    showToast('Configuraciones del Workspace guardadas');
+    showToast('Configuraciones e identidad visual de Pixel 12 guardadas con éxito', 'success');
   };
 
   const handleManualSyncFirestore = async () => {
@@ -81,7 +138,7 @@ export const SettingsView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Gestión de sesión, base de datos Firebase Firestore, zona horaria y reglas operativas
+              Gestión de sesión, base de datos Firestore, logo oficial, zona horaria y reglas operativas
             </p>
           </div>
         </div>
@@ -104,8 +161,129 @@ export const SettingsView: React.FC = () => {
 
       {/* Main Settings Form */}
       <form onSubmit={handleSave} className="bg-[#101018] p-6 sm:p-7 rounded-3xl border border-[#222234] shadow-xl space-y-6">
+        
+        {/* ========================================================= */}
+        {/* LOGO E IDENTIDAD VISUAL DE PIXEL 12 OS                     */}
+        {/* ========================================================= */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-[#1F1F30] pb-2">
+            <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider flex items-center gap-2">
+              <Palette className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>Logo Oficial e Identidad de Pixel 12 OS</span>
+            </h4>
+            <span className="text-[10px] text-[#E5C158] font-mono font-semibold">
+              Estética Obsidian · Oro · Plata
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center p-4 rounded-2xl bg-[#141422] border border-[#26263A]">
+            {/* Visual Preview Box */}
+            <div className="md:col-span-4 flex flex-col items-center justify-center p-4 rounded-2xl bg-[#09090E] border border-[#252538] text-center space-y-2">
+              <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">
+                Previsualización en Barra Lateral
+              </span>
+              
+              <div className="w-full py-4 px-3 rounded-xl bg-[#0D0D14] border border-[#1F1F30] flex items-center justify-center min-h-[80px]">
+                {logoPreview ? (
+                  <img
+                    src={logoPreview}
+                    alt="Logo Pixel 12 OS"
+                    className="max-h-12 max-w-full object-contain filter drop-shadow-[0_2px_8px_rgba(212,175,55,0.2)]"
+                    onError={() => {
+                      showToast('Error al cargar la imagen del logo. Verifique la URL.', 'error');
+                      setLogoPreview('');
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl p12-gold-gradient flex items-center justify-center font-black text-black text-xs shadow-md shadow-[#D4AF37]/20 shrink-0">
+                      P12
+                    </div>
+                    <div className="text-left">
+                      <span className="font-extrabold text-sm tracking-tight p12-silver-text leading-none block font-display">
+                        PIXEL 12 OS
+                      </span>
+                      <span className="text-[9px] text-zinc-400 font-mono block mt-0.5">
+                        Emblema Nativo
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <span className="text-[10px] text-zinc-400">
+                {logoPreview ? 'Logo personalizado activo' : 'Usando emblema nativo dorado'}
+              </span>
+            </div>
+
+            {/* Controls & Upload Actions */}
+            <div className="md:col-span-8 space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-white block">
+                  Subir o vincular logo oficial
+                </label>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Carga el archivo del logo oficial de Pixel 12 OS (PNG transparente, SVG, WebP o JPG). Se sincronizará inmediatamente en la barra lateral, reportes y cotizaciones.
+                </p>
+              </div>
+
+              {/* Upload Options */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/png,image/svg+xml,image/webp,image/jpeg"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 rounded-xl bg-[#202032] hover:bg-[#282840] border border-[#34344E] text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+                >
+                  <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  <span>Subir Archivo de Imagen</span>
+                </button>
+
+                {logoPreview && (
+                  <button
+                    type="button"
+                    onClick={handleResetLogoToDefault}
+                    className="px-3 py-2 rounded-xl bg-transparent hover:bg-[#1E1E2C] border border-[#2D2D40] text-zinc-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Restablecer Emblema P12
+                  </button>
+                )}
+              </div>
+
+              {/* URL Input Fallback */}
+              <div className="pt-2">
+                <label className="text-[11px] text-zinc-400 block mb-1">
+                  O pegar URL directa de la imagen (HTTPS):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={logoUrlInput}
+                    onChange={(e) => setLogoUrlInput(e.target.value)}
+                    placeholder="https://tudominio.com/logo-pixel12.png"
+                    className="flex-1 text-xs p-2.5 rounded-xl bg-[#101018] border border-[#28283E] text-white outline-none focus:border-[#D4AF37]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyLogoUrl}
+                    className="px-3 py-2.5 rounded-xl bg-[#1C1C2C] hover:bg-[#242438] border border-[#32324A] text-xs font-semibold text-zinc-200 cursor-pointer"
+                  >
+                    Aplicar URL
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Persistence & Cloud Database status */}
-        <div className="space-y-3">
+        <div className="space-y-3 pt-2">
           <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider border-b border-[#1F1F30] pb-2 flex items-center gap-2">
             <Cloud className="w-3.5 h-3.5 text-[#D4AF37]" />
             <span>Base de Datos Firestore & Despliegue Cloud</span>
@@ -153,7 +331,8 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* General & Working Hours */}
+        <div className="space-y-4 pt-2">
           <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider border-b border-[#1F1F30] pb-2 flex items-center gap-2">
             <Sliders className="w-3.5 h-3.5 text-[#D4AF37]" />
             <span>General & Horario de Operación</span>
@@ -201,7 +380,7 @@ export const SettingsView: React.FC = () => {
             <span>Reglas de Aprobación Editorial</span>
           </h4>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-[#141420] border border-[#27273C]">
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-[#141422] border border-[#27273C]">
             <div>
               <span className="text-xs font-bold text-white block">
                 Eliminar automáticamente publicaciones rechazadas
@@ -238,7 +417,7 @@ export const SettingsView: React.FC = () => {
             type="submit"
             className="px-6 py-2.5 rounded-xl p12-gold-gradient text-black font-black text-xs sm:text-sm hover:brightness-105 transition-all shadow-md shadow-[#D4AF37]/20 cursor-pointer active:scale-98"
           >
-            Guardar Cambios
+            Guardar Identidad y Ajustes
           </button>
         </div>
       </form>

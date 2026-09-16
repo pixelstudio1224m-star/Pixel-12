@@ -2,6 +2,7 @@ import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
 import { AuthView } from './components/auth/AuthView';
+import { AcceptInvitationView } from './components/auth/AcceptInvitationView';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
@@ -52,6 +53,12 @@ const WorkspaceShell: React.FC = () => {
         <span className="text-[11px] text-zinc-400 mt-1">Iniciando plataforma y verificando credenciales...</span>
       </div>
     );
+  }
+
+  // If an invitation token is present in the URL and user is not logged in, show the invitation acceptance view
+  const inviteToken = new URLSearchParams(window.location.search).get('invite_token');
+  if (inviteToken && !user) {
+    return <AcceptInvitationView token={inviteToken} />;
   }
 
   // Route protection: If user is not authenticated, immediately render login/register screen

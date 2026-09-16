@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
@@ -63,6 +64,15 @@ function readWorkspaceData() {
   try {
     const raw = fs.readFileSync(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
+    if (!parsed.brands || !Array.isArray(parsed.brands)) parsed.brands = initialWorkspaceData.brands;
+    if (!parsed.members || !Array.isArray(parsed.members)) parsed.members = initialWorkspaceData.members;
+    if (!parsed.posts || !Array.isArray(parsed.posts)) parsed.posts = initialWorkspaceData.posts || [];
+    if (!parsed.tasks || !Array.isArray(parsed.tasks)) parsed.tasks = initialWorkspaceData.tasks || [];
+    if (!parsed.campaigns || !Array.isArray(parsed.campaigns)) parsed.campaigns = initialWorkspaceData.campaigns || [];
+    if (!parsed.notifications || !Array.isArray(parsed.notifications)) parsed.notifications = initialWorkspaceData.notifications || [];
+    if (!parsed.invitations || !Array.isArray(parsed.invitations)) parsed.invitations = [];
+    if (!parsed.workspaceSettings) parsed.workspaceSettings = initialWorkspaceData.workspaceSettings;
+    if (!parsed.currentMember) parsed.currentMember = initialWorkspaceData.currentMember;
     if (!parsed.quotes) parsed.quotes = initialQuoteProposals;
     if (!parsed.plans) parsed.plans = initialAgencyPlans;
     if (!parsed.customServices) parsed.customServices = initialAgencyServices;
@@ -204,6 +214,614 @@ app.post('/api/workspace', (req, res) => {
 app.post('/api/workspace/reset', (req, res) => {
   writeWorkspaceData(initialWorkspaceData);
   res.json({ success: true, data: initialWorkspaceData });
+});
+
+// ---------------- SERVICIO DE EMAIL & INVITACIONES REALES (PIXEL 12) ----------------
+
+async function sendInvitationEmail(params: {
+  to: string;
+  recipientName: string;
+  role: string;
+  inviterName: string;
+  inviteUrl: string;
+  expiresAt: string;
+}): Promise<{ sent: boolean; provider?: string; error?: string }> {
+  const provider = (process.env.EMAIL_PROVIDER || '').toLowerCase();
+  const apiKey = process.env.EMAIL_API_KEY || '';
+  const fromAddress = process.env.EMAIL_FROM || 'Pixel 12 OS <onboarding@resend.dev>';
+
+  const expiryDateFormatted = new Date(params.expiresAt).toLocaleDateString('es-ES', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const emailHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Invitación Oficial a Pixel 12 OS</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #09090B; color: #E4E4E7; margin: 0; padding: 40px 16px; }
+    .card { max-width: 560px; margin: 0 auto; background-color: #12121A; border: 1px solid #27273A; border-radius: 16px; padding: 36px 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    .badge { display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, #D4AF37 0%, #AA820A 100%); color: #000000; font-size: 11px; font-weight: 900; letter-spacing: 1.5px; border-radius: 9999px; text-transform: uppercase; margin-bottom: 20px; }
+    h1 { color: #FFFFFF; font-size: 22px; font-weight: 700; margin: 0 0 16px; letter-spacing: -0.5px; }
+    p { color: #A1A1AA; font-size: 14px; line-height: 1.6; margin: 0 0 16px; }
+    .highlight-box { background-color: #181824; border-left: 3px solid #D4AF37; padding: 14px 18px; border-radius: 8px; margin: 20px 0; }
+    .highlight-box p { margin: 0; color: #E4E4E7; font-size: 13px; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #E5C158 0%, #D4AF37 50%, #B89628 100%); color: #09090B !important; font-weight: 800; font-size: 14px; text-decoration: none; padding: 14px 28px; border-radius: 10px; margin: 24px 0; text-align: center; letter-spacing: 0.5px; }
+    .direct-link { font-size: 11px; color: #71717A; word-break: break-all; margin-top: 10px; }
+    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #52525B; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">PIXEL 12 OS</div>
+    <h1>Invitación Oficial al Equipo de Pixel 12</h1>
+    <p>Hola <strong>${params.recipientName}</strong>,</p>
+    <p>Has sido invitado por <strong>${params.inviterName}</strong> a formar parte del equipo interno de <strong>Pixel 12 Studio</strong> con el rol de <strong>${params.role}</strong>.</p>
+    
+    <div class="highlight-box">
+      <p><strong>Plataforma Privada de Operaciones & IA</strong></p>
+      <p>Tendrás acceso a la gestión de contenidos, diseño de posts/carruseles, CRM comercial, calendario editorial, tareas y asistentes de inteligencia artificial de Pixel 12.</p>
+    </div>
+
+    <div style="text-align: center;">
+      <a href="${params.inviteUrl}" class="btn" target="_blank" style="color: #09090B;">Aceptar Invitación & Configurar Acceso</a>
+    </div>
+
+    <p style="font-size: 12px; color: #71717A;">
+      ⚠️ Este enlace es único, seguro y expirará el <strong>${expiryDateFormatted}</strong> (válido por 7 días). Solo puede utilizarse una vez.
+    </p>
+
+    <div class="direct-link">
+      Si el botón no funciona, copia y abre este enlace seguro en tu navegador:<br/>
+      <a href="${params.inviteUrl}" style="color: #D4AF37;">${params.inviteUrl}</a>
+    </div>
+
+    <div class="footer">
+      © ${new Date().getFullYear()} Pixel 12 Studio. Plataforma Privada de Operaciones y Marketing.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  if (!apiKey) {
+    console.warn('[Email] EMAIL_API_KEY no configurada. La invitación se registró con token de enlace directo.');
+    return {
+      sent: false,
+      error: 'EMAIL_API_KEY no configurada en las variables de entorno de Render / servidor.'
+    };
+  }
+
+  // 1. Resend API
+  if (provider === 'resend' || (!provider && apiKey.startsWith('re_')) || (apiKey && !provider)) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: [params.to],
+          subject: `Invitación oficial al equipo de Pixel 12 OS (${params.role})`,
+          html: emailHtml
+        })
+      });
+      if (res.ok) {
+        console.log(`[Email] Invitación enviada exitosamente a ${params.to} vía Resend`);
+        return { sent: true, provider: 'resend' };
+      } else {
+        const errorText = await res.text();
+        console.warn('[Email] Resend API respondió con error:', res.status, errorText);
+        return { sent: false, provider: 'resend', error: errorText };
+      }
+    } catch (e: any) {
+      console.error('[Email] Excepción enviando vía Resend:', e);
+      return { sent: false, provider: 'resend', error: e.message };
+    }
+  }
+
+  // 2. SendGrid API
+  if (provider === 'sendgrid' || apiKey.startsWith('SG.')) {
+    try {
+      const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: params.to, name: params.recipientName }] }],
+          from: { email: fromAddress.includes('<') ? fromAddress.match(/<([^>]+)>/)?.[1] || fromAddress : fromAddress, name: 'Pixel 12 OS' },
+          subject: `Invitación oficial al equipo de Pixel 12 OS (${params.role})`,
+          content: [{ type: 'text/html', value: emailHtml }]
+        })
+      });
+      if (res.status >= 200 && res.status < 300) {
+        console.log(`[Email] Invitación enviada exitosamente a ${params.to} vía SendGrid`);
+        return { sent: true, provider: 'sendgrid' };
+      } else {
+        const errorText = await res.text();
+        console.warn('[Email] SendGrid API error:', res.status, errorText);
+        return { sent: false, provider: 'sendgrid', error: errorText };
+      }
+    } catch (e: any) {
+      return { sent: false, provider: 'sendgrid', error: e.message };
+    }
+  }
+
+  // 3. Postmark API
+  if (provider === 'postmark') {
+    try {
+      const res = await fetch('https://api.postmarkapp.com/email', {
+        method: 'POST',
+        headers: {
+          'X-Postmark-Server-Token': apiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          From: fromAddress,
+          To: params.to,
+          Subject: `Invitación oficial al equipo de Pixel 12 OS (${params.role})`,
+          HtmlBody: emailHtml
+        })
+      });
+      if (res.ok) {
+        return { sent: true, provider: 'postmark' };
+      } else {
+        const errorText = await res.text();
+        return { sent: false, provider: 'postmark', error: errorText };
+      }
+    } catch (e: any) {
+      return { sent: false, provider: 'postmark', error: e.message };
+    }
+  }
+
+  return {
+    sent: false,
+    error: `Proveedor '${provider}' no reconocido.`
+  };
+}
+
+// ---------------- GESTIÓN DE EQUIPO & INVITACIONES (ENDPOINTS) ----------------
+
+// 1. Listar miembros
+app.get('/api/team/members', (req, res) => {
+  const data = readWorkspaceData();
+  res.json({
+    members: data.members || [],
+    invitations: data.invitations || []
+  });
+});
+
+// 2. Invitar nuevo miembro con envío real de correo
+app.post('/api/team/invite', async (req, res) => {
+  try {
+    const { email, name, role, invitedBy } = req.body;
+    if (!email || !name) {
+      return res.status(400).json({ error: 'Nombre y correo electrónico son requeridos.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+    const targetRole = role || 'Designer';
+
+    const data = readWorkspaceData();
+    if (!data.members) data.members = [];
+    if (!data.invitations) data.invitations = [];
+
+    // Validar si el usuario ya es miembro activo
+    const existingMember = data.members.find(
+      (m: any) => m.email?.toLowerCase() === cleanEmail
+    );
+
+    if (existingMember && existingMember.status === 'active') {
+      return res.status(400).json({
+        error: `El usuario con correo ${cleanEmail} ya es un miembro activo del equipo.`
+      });
+    }
+
+    // Generar token seguro e irrepetible
+    const token = crypto.randomBytes(24).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 días
+
+    // Construir URL de aceptación compatible con dev, preview y producción Render
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3000';
+    const origin = req.get('origin') || `${proto}://${host}`;
+    const cleanOrigin = origin.replace(/\/$/, '');
+    const inviteUrl = `${cleanOrigin}/?invite_token=${token}`;
+
+    const inviterName = invitedBy?.name || data.currentMember?.name || 'Administrador Pixel 12';
+
+    // Enviar correo real
+    const emailResult = await sendInvitationEmail({
+      to: cleanEmail,
+      recipientName: cleanName,
+      role: targetRole,
+      inviterName,
+      inviteUrl,
+      expiresAt
+    });
+
+    // Registrar o actualizar miembro en el equipo
+    const memberId = existingMember ? existingMember.id : `mem_${Date.now()}`;
+    const memberObj = {
+      id: memberId,
+      name: cleanName,
+      email: cleanEmail,
+      role: targetRole,
+      avatar: existingMember?.avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      status: 'invited',
+      invitedAt: new Date().toISOString(),
+      invitedBy: inviterName
+    };
+
+    if (existingMember) {
+      Object.assign(existingMember, memberObj);
+    } else {
+      data.members.push(memberObj);
+    }
+
+    // Registrar invitación única
+    const invitationObj = {
+      id: `inv_${Date.now()}`,
+      email: cleanEmail,
+      name: cleanName,
+      role: targetRole,
+      token,
+      status: 'pending',
+      invitedBy: {
+        id: invitedBy?.id || data.currentMember?.id || 'admin',
+        name: inviterName,
+        email: invitedBy?.email || data.currentMember?.email || 'admin@pixel12.agency'
+      },
+      createdAt: new Date().toISOString(),
+      expiresAt,
+      emailSent: emailResult.sent,
+      emailDeliveryError: emailResult.error
+    };
+
+    // Reemplazar invitaciones previas pendientes del mismo correo
+    data.invitations = data.invitations.filter(
+      (i: any) => i.email?.toLowerCase() !== cleanEmail || i.status === 'accepted'
+    );
+    data.invitations.push(invitationObj);
+
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      emailSent: emailResult.sent,
+      emailDeliveryError: emailResult.error,
+      inviteUrl,
+      token,
+      member: memberObj,
+      invitation: invitationObj,
+      message: emailResult.sent
+        ? `Invitación enviada por correo a ${cleanEmail}.`
+        : `Invitación registrada. Configura EMAIL_API_KEY en Render para envío automático o comparte el enlace directo.`
+    });
+  } catch (err: any) {
+    console.error('Error in /api/team/invite:', err);
+    res.status(500).json({ error: 'Error procesando la invitación: ' + err.message });
+  }
+});
+
+// 3. Reenviar invitación por correo
+app.post('/api/team/resend-invite', async (req, res) => {
+  try {
+    const { memberId, email } = req.body;
+    const data = readWorkspaceData();
+    if (!data.members) data.members = [];
+    if (!data.invitations) data.invitations = [];
+
+    const member = data.members.find(
+      (m: any) => (memberId && m.id === memberId) || (email && m.email?.toLowerCase() === email.toLowerCase())
+    );
+
+    if (!member) {
+      return res.status(404).json({ error: 'Miembro no encontrado.' });
+    }
+
+    // Generar nuevo token seguro y renovar 7 días
+    const token = crypto.randomBytes(24).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3000';
+    const origin = req.get('origin') || `${proto}://${host}`;
+    const cleanOrigin = origin.replace(/\/$/, '');
+    const inviteUrl = `${cleanOrigin}/?invite_token=${token}`;
+
+    const inviterName = data.currentMember?.name || 'Administrador Pixel 12';
+
+    const emailResult = await sendInvitationEmail({
+      to: member.email,
+      recipientName: member.name,
+      role: member.role,
+      inviterName,
+      inviteUrl,
+      expiresAt
+    });
+
+    member.status = 'invited';
+    member.invitedAt = new Date().toISOString();
+
+    const invitationObj = {
+      id: `inv_${Date.now()}`,
+      email: member.email.toLowerCase(),
+      name: member.name,
+      role: member.role,
+      token,
+      status: 'pending',
+      invitedBy: {
+        id: data.currentMember?.id || 'admin',
+        name: inviterName,
+        email: data.currentMember?.email || 'admin@pixel12.agency'
+      },
+      createdAt: new Date().toISOString(),
+      expiresAt,
+      emailSent: emailResult.sent,
+      emailDeliveryError: emailResult.error
+    };
+
+    data.invitations = data.invitations.filter(
+      (i: any) => i.email?.toLowerCase() !== member.email.toLowerCase() || i.status === 'accepted'
+    );
+    data.invitations.push(invitationObj);
+
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      emailSent: emailResult.sent,
+      emailDeliveryError: emailResult.error,
+      inviteUrl,
+      token,
+      invitation: invitationObj,
+      message: emailResult.sent
+        ? `Invitación reenviada exitosamente a ${member.email}.`
+        : `Enlace renovado. Puedes copiar el enlace directo o configurar EMAIL_API_KEY.`
+    });
+  } catch (err: any) {
+    console.error('Error in /api/team/resend-invite:', err);
+    res.status(500).json({ error: 'Error reenviando invitación: ' + err.message });
+  }
+});
+
+// 4. Desactivar miembro (conserva todas sus tareas, posts y registros para integridad)
+app.post('/api/team/deactivate', (req, res) => {
+  try {
+    const { memberId } = req.body;
+    if (!memberId) {
+      return res.status(400).json({ error: 'memberId es requerido.' });
+    }
+
+    const data = readWorkspaceData();
+    if (!data.members) data.members = [];
+
+    const member = data.members.find((m: any) => m.id === memberId);
+    if (!member) {
+      return res.status(404).json({ error: 'Miembro no encontrado.' });
+    }
+
+    if (member.id === 'mem_1' || member.role === 'Owner') {
+      return res.status(400).json({ error: 'No se puede desactivar al propietario principal del espacio de trabajo.' });
+    }
+
+    member.status = 'inactive';
+    member.deactivatedAt = new Date().toISOString();
+
+    // Revocar invitaciones pendientes
+    if (data.invitations) {
+      data.invitations.forEach((inv: any) => {
+        if (inv.email?.toLowerCase() === member.email?.toLowerCase() && inv.status === 'pending') {
+          inv.status = 'revoked';
+        }
+      });
+    }
+
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      message: `El acceso para ${member.name} (${member.email}) ha sido desactivado. Sus registros y tareas se mantienen íntegros.`,
+      member
+    });
+  } catch (err: any) {
+    console.error('Error in /api/team/deactivate:', err);
+    res.status(500).json({ error: 'Error desactivando miembro: ' + err.message });
+  }
+});
+
+// 5. Reactivar miembro
+app.post('/api/team/reactivate', (req, res) => {
+  try {
+    const { memberId } = req.body;
+    if (!memberId) {
+      return res.status(400).json({ error: 'memberId es requerido.' });
+    }
+
+    const data = readWorkspaceData();
+    if (!data.members) data.members = [];
+
+    const member = data.members.find((m: any) => m.id === memberId);
+    if (!member) {
+      return res.status(404).json({ error: 'Miembro no encontrado.' });
+    }
+
+    member.status = 'active';
+    delete member.deactivatedAt;
+
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      message: `El acceso para ${member.name} ha sido reactivado.`,
+      member
+    });
+  } catch (err: any) {
+    console.error('Error in /api/team/reactivate:', err);
+    res.status(500).json({ error: 'Error reactivando miembro: ' + err.message });
+  }
+});
+
+// 6. Verificar validez de un token de invitación
+app.get('/api/invitations/verify', (req, res) => {
+  try {
+    const token = String(req.query.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ valid: false, reason: 'MISSING_TOKEN', message: 'Token no proporcionado.' });
+    }
+
+    const data = readWorkspaceData();
+    const invitation = (data.invitations || []).find((i: any) => i.token === token);
+
+    if (!invitation) {
+      return res.status(404).json({
+        valid: false,
+        reason: 'NOT_FOUND',
+        message: 'Enlace de invitación inexistente o inválido.'
+      });
+    }
+
+    if (invitation.status === 'accepted') {
+      return res.status(400).json({
+        valid: false,
+        reason: 'ALREADY_USED',
+        message: 'Esta invitación ya fue utilizada previamente. Puedes iniciar sesión con tus credenciales.'
+      });
+    }
+
+    if (invitation.status === 'revoked') {
+      return res.status(400).json({
+        valid: false,
+        reason: 'REVOKED',
+        message: 'Esta invitación fue revocada por un administrador de Pixel 12.'
+      });
+    }
+
+    if (new Date(invitation.expiresAt).getTime() < Date.now()) {
+      return res.status(400).json({
+        valid: false,
+        reason: 'EXPIRED',
+        expiresAt: invitation.expiresAt,
+        message: 'Esta invitación ha expirado. Solicita al administrador de Pixel 12 un nuevo reenvío.'
+      });
+    }
+
+    res.json({
+      valid: true,
+      invitation: {
+        email: invitation.email,
+        name: invitation.name,
+        role: invitation.role,
+        expiresAt: invitation.expiresAt,
+        invitedBy: invitation.invitedBy
+      }
+    });
+  } catch (err: any) {
+    console.error('Error in /api/invitations/verify:', err);
+    res.status(500).json({ valid: false, error: err.message });
+  }
+});
+
+// 7. Aceptar invitación y activar acceso
+app.post('/api/invitations/accept', (req, res) => {
+  try {
+    const { token, password, displayName } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token y contraseña requeridos.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    const data = readWorkspaceData();
+    if (!data.invitations) data.invitations = [];
+    if (!data.members) data.members = [];
+
+    const invitation = data.invitations.find((i: any) => i.token === token);
+    if (!invitation) {
+      return res.status(404).json({ error: 'Invitación no válida o no encontrada.' });
+    }
+
+    if (invitation.status === 'accepted') {
+      return res.status(400).json({ error: 'Esta invitación ya fue utilizada.' });
+    }
+
+    if (new Date(invitation.expiresAt).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Esta invitación ha expirado. Solicita una nueva.' });
+    }
+
+    // Marcar invitación como aceptada
+    invitation.status = 'accepted';
+    invitation.acceptedAt = new Date().toISOString();
+
+    // Activar miembro en la lista del equipo
+    let member = data.members.find((m: any) => m.email?.toLowerCase() === invitation.email.toLowerCase());
+    if (member) {
+      member.status = 'active';
+      if (displayName) member.name = displayName.trim();
+    } else {
+      member = {
+        id: `mem_${Date.now()}`,
+        name: (displayName || invitation.name).trim(),
+        email: invitation.email.toLowerCase(),
+        role: invitation.role || 'Designer',
+        avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+        status: 'active'
+      };
+      data.members.push(member);
+    }
+
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      message: 'Invitación aceptada correctamente. Tu acceso a Pixel 12 OS ha sido activado.',
+      user: {
+        uid: member.id,
+        email: invitation.email.toLowerCase(),
+        displayName: member.name,
+        role: member.role
+      }
+    });
+  } catch (err: any) {
+    console.error('Error in /api/invitations/accept:', err);
+    res.status(500).json({ error: 'Error aceptando la invitación: ' + err.message });
+  }
+});
+
+// 8. Validación de estado de cuenta para inicio de sesión seguro
+app.post('/api/auth/check-access', (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ allowed: true });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const data = readWorkspaceData();
+    const member = (data.members || []).find((m: any) => m.email?.toLowerCase() === cleanEmail);
+
+    if (member && member.status === 'inactive') {
+      return res.status(403).json({
+        allowed: false,
+        reason: 'DEACTIVATED',
+        message: 'Esta cuenta ha sido desactivada por un administrador de Pixel 12 Studio. No tienes acceso a la plataforma.'
+      });
+    }
+
+    res.json({ allowed: true, status: member?.status || 'active' });
+  } catch (err: any) {
+    res.json({ allowed: true });
+  }
 });
 
 // ---------------- COTIZACIONES & PROPUESTAS API (PIXEL 12) ----------------
@@ -2060,7 +2678,7 @@ app.post('/api/ai/generate-post-design', async (req, res) => {
         ],
         showAuthorBadge: false,
         showOfficialLogo: true,
-        highlightBadge: 'MÉTODO AUDITADO',
+        highlightBadge: 'MÉTODO PIXEL 12',
         accentColor: brandGold,
         visualDescription: 'Infografía con fotografía de equipo estratégico y los 3 pilares clave en tarjetas oscuras con bordes dorados.'
       },

@@ -68,3 +68,52 @@
   background: #D4AF37;
 }
 
+/* Print Styles for Quotes and Proposals PDF generation */
+@media print {
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
+
+  /* Hide navigation, sidebar, headers and other background components */
+  aside,
+  header,
+  #main-sidebar,
+  #app-header,
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  #quote-detail-modal {
+    position: static !important;
+    background: #FFFFFF !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  #quote-detail-modal > div {
+    border: none !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    width: 100% !important;
+    background: #FFFFFF !important;
+  }
+
+  #printable-proposal {
+    color: #000000 !important;
+    background: #FFFFFF !important;
+  }
+
+  #printable-proposal * {
+    color: #000000 !important;
+    border-color: #D1D5DB !important;
+  }
+
+  #printable-proposal .p12-gold-gradient {
+    background: #D4AF37 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+

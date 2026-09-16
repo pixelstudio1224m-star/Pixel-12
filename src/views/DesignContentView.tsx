@@ -50,6 +50,7 @@ import {
   P12_DYNAMIC_SLIDE_IMAGES,
   P12_AUTHOR_AVATAR
 } from '../lib/dynamicImageBank';
+import { ScheduleContentModal } from '../components/calendar/ScheduleContentModal';
 
 const formatOptions: Array<{ id: DesignFormatType; label: string; icon: string }> = [
   { id: 'Carrusel', label: 'Carrusel', icon: '🖼️' },
@@ -94,6 +95,7 @@ export const DesignContentView: React.FC = () => {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   // Dynamic Image & Customization states
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
@@ -576,8 +578,7 @@ export const DesignContentView: React.FC = () => {
             {/* Botones de Aprobación y Agendado */}
             <div className="flex items-center gap-2.5 w-full md:w-auto">
               <button
-                onClick={handleApproveAndSchedule}
-                disabled={isApproved || isScheduling}
+                onClick={() => setIsScheduleModalOpen(true)}
                 className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer ${
                   isApproved
                     ? 'bg-emerald-600 text-white shadow-emerald-900/30'
@@ -585,7 +586,7 @@ export const DesignContentView: React.FC = () => {
                 }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{isApproved ? '¡Aprobado en Calendario!' : 'Aprobar y Agendar en Calendario'}</span>
+                <span>{isApproved ? '¡Programado en Calendario!' : 'Programar en Calendario'}</span>
               </button>
 
               <button
@@ -1234,6 +1235,47 @@ export const DesignContentView: React.FC = () => {
             ? slides[currentSlideIndex]?.imageUrl
             : singlePostImageUrl
         }
+      />
+
+      {/* Modal de Programación directa en Calendario */}
+      <ScheduleContentModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        initialData={{
+          internalTitle: generatedContent?.title,
+          caption: generatedContent?.caption,
+          cta: generatedContent?.cta,
+          hook: generatedContent?.hook,
+          hashtags: generatedContent?.hashtags,
+          format: selectedFormat === 'Carrusel' ? 'Carousel' : selectedFormat === 'Guion de Reel' ? 'Reel' : 'Static Post',
+          pillar: selectedPillar,
+          theme: generatedContent?.theme || topic,
+          brandId: activeBrand.id,
+          slides: slides,
+          imageUrl: slides[0]?.imageUrl || singlePostImageUrl || P12_DYNAMIC_SLIDE_IMAGES[0],
+          status: 'SCHEDULED',
+        }}
+        onScheduled={async (createdPost) => {
+          setIsApproved(true);
+          if (generatedContent?.suggestedTasks && generatedContent.suggestedTasks.length > 0) {
+            for (const task of generatedContent.suggestedTasks) {
+              await addTask({
+                id: 'task_p12_' + Math.random().toString(36).substring(2, 9),
+                brandId: activeBrand.id,
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
+                status: 'TODO',
+                assignedRole: task.assignedRole,
+                dueDate: createdPost.date,
+                relatedPostId: createdPost.id,
+                relatedPostTitle: createdPost.internalTitle,
+                history: [],
+                createdAt: new Date().toISOString(),
+              });
+            }
+          }
+        }}
       />
     </div>
   );

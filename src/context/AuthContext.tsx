@@ -14,6 +14,7 @@ import {
   UserProfile,
   UserRole
 } from '../lib/firebase';
+import { checkAccountAccessApi, acceptTeamInvitationApi } from '../lib/api';
 
 interface AuthUserLike {
   uid: string;
@@ -29,10 +30,12 @@ interface AuthContextType {
   isLoadingAuth: boolean;
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string, name: string, role?: UserRole, companyName?: string) => Promise<void>;
+  acceptInvitation: (token: string, pass: string, displayName: string) => Promise<any>;
   quickLoginMasterAdmin: () => Promise<void>;
   logout: () => Promise<void>;
   canAccessCrm: boolean;
   canManageSettings: boolean;
+  canManageTeam: boolean;
   canEditQuotes: boolean;
   canViewFinancials: boolean;
   isClient: boolean;
@@ -134,6 +137,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
+
+    // Guard: Prevent deactivated members from accessing Pixel 12 OS
+    const accessCheck = await checkAccountAccessApi(cleanEmail);
+    if (!accessCheck.allowed) {
+      throw new Error(accessCheck.message || 'Tu cuenta ha sido desactivada por un administrador de Pixel 12 Studio.');
+    }
 
     // First: attempt Firebase Auth
     let firebaseSuccess = false;
@@ -300,6 +309,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(adminProf));
   };
 
+  const acceptInvitation = async (token: string, pass: string, displayName: string) => {
+    const res = await acceptTeamInvitationApi({ token, password: pass, displayName });
+    if (res && res.user) {
+      const acceptedProf: UserProfile = {
+        uid: res.user.uid,
+        email: res.user.email,
+        displayName: res.user.displayName,
+        role: (res.user.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'TEAM') as UserRole,
+        createdAt: new Date().toISOString()
+      };
+      saveRegisteredUser(res.user.email, pass, acceptedProf);
+      setUser({
+        uid: acceptedProf.uid,
+        email: acceptedProf.email,
+        displayName: acceptedProf.displayName
+      });
+      setProfile(acceptedProf);
+      localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(acceptedProf));
+      return res;
+    }
+    throw new Error('Error al procesar la aceptación de la invitación.');
+  };
+
   const logout = async () => {
     try {
       await firebaseSignOut(auth);
@@ -314,6 +346,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const role = profile?.role || 'ADMIN';
   const canAccessCrm = role === 'ADMIN' || role === 'TEAM';
   const canManageSettings = role === 'ADMIN';
+  const canManageTeam =
+    role === 'ADMIN' ||
+    profile?.email === 'pixelstudio1224m@gmail.com' ||
+    Boolean(profile?.email?.includes('admin@pixel12')) ||
+    Boolean(profile?.displayName?.includes('Admin'));
   const canEditQuotes = role === 'ADMIN' || role === 'TEAM';
   const canViewFinancials = role === 'ADMIN';
   const isClient = role === 'CLIENT';
@@ -327,10 +364,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoadingAuth,
         login,
         register,
+        acceptInvitation,
         quickLoginMasterAdmin,
         logout,
         canAccessCrm,
         canManageSettings,
+        canManageTeam,
         canEditQuotes,
         canViewFinancials,
         isClient
