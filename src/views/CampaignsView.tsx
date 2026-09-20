@@ -21,7 +21,7 @@ export const CampaignsView: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
-  const [targetAudience, setTargetAudience] = useState(activeBrand.targetAudience);
+  const [targetAudience, setTargetAudience] = useState(activeBrand?.targetAudience || '');
   const [startDate, setStartDate] = useState('2026-09-01');
   const [endDate, setEndDate] = useState('2026-09-30');
   const [budget, setBudget] = useState(1200);
@@ -32,7 +32,7 @@ export const CampaignsView: React.FC = () => {
 
     const newCamp: Campaign = {
       id: 'camp_' + Date.now(),
-      brandId: activeBrand.id,
+      brandId: activeBrand?.id || 'brand_p12',
       name: name.trim(),
       objective: objective.trim() || 'Generar clientes potenciales para el servicio estrella',
       targetAudience: targetAudience.trim(),
@@ -180,9 +180,9 @@ export const CampaignsView: React.FC = () => {
 
       {/* Campaigns Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {data.campaigns.map((camp) => {
-          const linkedPosts = data.posts.filter((p) => p.campaignId === camp.id);
-          const linkedTasks = data.tasks.filter((t) => t.relatedPostId && linkedPosts.some((lp) => lp.id === t.relatedPostId));
+        {(data?.campaigns || []).map((camp) => {
+          const linkedPosts = (data?.posts || []).filter((p) => p && p.campaignId === camp.id);
+          const linkedTasks = (data?.tasks || []).filter((t) => t && t.relatedPostId && linkedPosts.some((lp) => lp.id === t.relatedPostId));
 
           return (
             <div

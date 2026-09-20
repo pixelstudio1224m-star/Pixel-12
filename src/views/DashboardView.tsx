@@ -33,12 +33,16 @@ export const DashboardView: React.FC = () => {
 
   const [platformFilter, setPlatformFilter] = useState<string>('ALL');
 
-  const totalPosts = data.posts.length;
-  const inReviewPosts = data.posts.filter((p) => p.status === 'IN_REVIEW');
-  const approvedPosts = data.posts.filter((p) => p.status === 'APPROVED' || p.status === 'SCHEDULED');
-  const pendingTasks = data.tasks.filter((t) => t.status !== 'COMPLETED' && t.status !== 'CANCELLED');
+  const posts = data?.posts || [];
+  const tasks = data?.tasks || [];
 
-  const filteredPosts = data.posts.filter((p) => {
+  const totalPosts = posts.length;
+  const inReviewPosts = posts.filter((p) => p && p.status === 'IN_REVIEW');
+  const approvedPosts = posts.filter((p) => p && (p.status === 'APPROVED' || p.status === 'SCHEDULED'));
+  const pendingTasks = tasks.filter((t) => t && t.status !== 'COMPLETED' && t.status !== 'CANCELLED');
+
+  const filteredPosts = posts.filter((p) => {
+    if (!p) return false;
     if (platformFilter === 'ALL') return true;
     return p.platform === platformFilter;
   });

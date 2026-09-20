@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Post, DesignSlide } from '../../types';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import {
@@ -43,18 +43,23 @@ export const CarouselSlideViewer: React.FC<CarouselSlideViewerProps> = ({
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
 
-  const slides: DesignSlide[] = post.slides && post.slides.length > 0 ? post.slides : [];
-  const currentSlide: DesignSlide | undefined = slides[currentSlideIndex];
-  const aiCredits = data.workspaceSettings.aiCredits ?? 120;
+  useEffect(() => {
+    setCurrentSlideIndex(0);
+  }, [post?.id]);
 
-  if (slides.length === 0) {
+  const slides: DesignSlide[] = post?.slides && post.slides.length > 0 ? post.slides : [];
+  const safeIndex = Math.min(currentSlideIndex, Math.max(0, slides.length - 1));
+  const currentSlide: DesignSlide | undefined = slides[safeIndex];
+  const aiCredits = data?.workspaceSettings?.aiCredits ?? 120;
+
+  if (slides.length === 0 || !currentSlide) {
     return null;
   }
 
   // Active slide image resolution: use slide.imageUrl or recommended fallback
   const activeSlideImage = currentSlide?.imageUrl || getRecommendedSlideImage(
     currentSlide?.slideType || 'cover',
-    currentSlideIndex,
+    safeIndex,
     post.theme || post.internalTitle
   );
 
@@ -64,8 +69,9 @@ export const CarouselSlideViewer: React.FC<CarouselSlideViewerProps> = ({
 
   const handleUpdateSlide = (partial: Partial<DesignSlide>) => {
     const updatedSlides = [...slides];
-    updatedSlides[currentSlideIndex] = {
-      ...updatedSlides[currentSlideIndex],
+    if (!updatedSlides[safeIndex]) return;
+    updatedSlides[safeIndex] = {
+      ...updatedSlides[safeIndex],
       ...partial
     };
     const updatedPost: Post = {
@@ -141,7 +147,9 @@ export const CarouselSlideViewer: React.FC<CarouselSlideViewerProps> = ({
   const copySlideText = () => {
     if (!currentSlide) return;
     const text = `${currentSlide.headline}\n${currentSlide.subtitle || ''}\n${(currentSlide.bodyPoints || []).join('\n')}`;
-    navigator.clipboard.writeText(text);
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     showToast('Texto de la slide copiado al portapapeles');

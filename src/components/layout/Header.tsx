@@ -45,7 +45,7 @@ export const Header: React.FC = () => {
     updateTime();
     const interval = setInterval(updateTime, 30000);
     return () => clearInterval(interval);
-  }, [data.workspaceSettings.timezone]);
+  }, [data?.workspaceSettings?.timezone]);
 
   // Keyboard shortcut Ctrl+K / Cmd+K for search
   useEffect(() => {
@@ -59,12 +59,13 @@ export const Header: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [openGlobalSearch]);
 
-  const unreadNotifs = data.notifications.filter((n) => !n.read);
+  const notifications = data?.notifications || [];
+  const unreadNotifs = notifications.filter((n) => n && !n.read);
 
   const viewTitles: Record<ViewType, { title: string; subtitle: string; tag?: string }> = {
     dashboard: {
       title: 'Panel General',
-      subtitle: `Visión estratégica y métricas clave para ${activeBrand.name}`,
+      subtitle: `Visión estratégica y métricas clave para ${activeBrand?.name || 'la Marca'}`,
       tag: 'RESUMEN',
     },
     crm: {
@@ -260,7 +261,9 @@ export const Header: React.FC = () => {
                 {unreadNotifs.length > 0 && (
                   <button
                     onClick={() => {
-                      data.notifications.forEach((n) => (n.read = true));
+                      notifications.forEach((n) => {
+                        if (n) n.read = true;
+                      });
                       setNotificationsOpen(false);
                       showToast('Todas marcadas como leídas');
                     }}
@@ -273,12 +276,12 @@ export const Header: React.FC = () => {
               </div>
 
               <div className="max-h-64 overflow-y-auto divide-y divide-[#1D1D2C]">
-                {data.notifications.length === 0 ? (
+                {notifications.length === 0 ? (
                   <div className="px-4 py-6 text-center text-xs text-zinc-400">
                     No hay notificaciones pendientes
                   </div>
                 ) : (
-                  data.notifications.slice(0, 8).map((notif) => (
+                  notifications.slice(0, 8).map((notif) => (
                     <div
                       key={notif.id}
                       onClick={() => {

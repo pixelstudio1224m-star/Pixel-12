@@ -29,7 +29,7 @@ import {
 export const QuotesView: React.FC = () => {
   const { data, duplicateQuote, deleteQuote, updateQuote, addToast } = useWorkspace();
 
-  const quotes = data.quotes || [];
+  const quotes = data?.quotes || [];
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,8 +46,8 @@ export const QuotesView: React.FC = () => {
 
   // Financial KPI calculations
   const totalQuotesCount = quotes.length;
-  const acceptedQuotes = quotes.filter((q) => q.status === 'ACCEPTED');
-  const sentQuotes = quotes.filter((q) => q.status === 'SENT');
+  const acceptedQuotes = quotes.filter((q) => q && q.status === 'ACCEPTED');
+  const sentQuotes = quotes.filter((q) => q && q.status === 'SENT');
 
   const totalAcceptedAmount = acceptedQuotes.reduce((sum, q) => sum + (Number(q.total) || 0), 0);
   const totalSentAmount = sentQuotes.reduce((sum, q) => sum + (Number(q.total) || 0), 0);
@@ -60,12 +60,19 @@ export const QuotesView: React.FC = () => {
   // Filtered quotes list
   const filteredQuotes = quotes
     .filter((quote) => {
+      if (!quote) return false;
+      const company = quote.client?.company || '';
+      const clientName = quote.client?.name || '';
+      const folio = quote.folio || '';
+      const title = quote.title || '';
+      const q = searchQuery.toLowerCase();
+
       const matchesSearch =
         !searchQuery.trim() ||
-        quote.client.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        quote.client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        quote.folio.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        quote.title.toLowerCase().includes(searchQuery.toLowerCase());
+        company.toLowerCase().includes(q) ||
+        clientName.toLowerCase().includes(q) ||
+        folio.toLowerCase().includes(q) ||
+        title.toLowerCase().includes(q);
 
       const matchesStatus = selectedStatus === 'ALL' || quote.status === selectedStatus;
 
@@ -93,7 +100,7 @@ export const QuotesView: React.FC = () => {
   const handleStatusChange = (id: string, newStatus: QuoteStatus) => {
     const target = quotes.find((q) => q.id === id);
     if (target) {
-      updateQuote({ ...target, status: newStatus });
+      updateQuote(id, { status: newStatus });
       addToast(`Estado de cotización actualizado a ${newStatus}`, 'info');
     }
   };

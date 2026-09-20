@@ -294,7 +294,8 @@ export const PostDetailModal: React.FC = () => {
       setJustGenerated(true);
       showToast(`¡Diseño generado! La pieza ahora aparece en Aprobación → Pendientes con sus slides.`);
     } catch (err: any) {
-      console.error(err);
+      console.error('Error generating post design:', err);
+      showToast(err?.message || 'Error al generar el diseño con IA', 'error');
     } finally {
       clearInterval(stepInterval);
       clearInterval(timerInterval);
@@ -309,7 +310,7 @@ export const PostDetailModal: React.FC = () => {
     'Renderizando tipografía de alta jerarquía y exportando artes listos para publicar...'
   ];
 
-  const relatedTasks = data.tasks.filter((t) => t.relatedPostId === selectedPost.id);
+  const relatedTasks = (data?.tasks || []).filter((t) => t && t.relatedPostId === selectedPost.id);
 
   const statusColors: Record<PostStatus, { bg: string; text: string; label: string }> = {
     DRAFT: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Borrador' },

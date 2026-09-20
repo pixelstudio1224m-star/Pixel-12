@@ -18,23 +18,31 @@ export const GlobalSearchModal: React.FC = () => {
     if (!query.trim()) return { posts: [], tasks: [], campaigns: [] };
     const q = query.toLowerCase();
 
-    const posts = data.posts.filter(
+    const posts = (data?.posts || []).filter(
       (p) =>
-        p.internalTitle.toLowerCase().includes(q) ||
-        p.hook.toLowerCase().includes(q) ||
-        p.caption.toLowerCase().includes(q) ||
-        p.theme.toLowerCase().includes(q)
+        p && (
+          (p.internalTitle && p.internalTitle.toLowerCase().includes(q)) ||
+          (p.hook && p.hook.toLowerCase().includes(q)) ||
+          (p.caption && p.caption.toLowerCase().includes(q)) ||
+          (p.theme && p.theme.toLowerCase().includes(q))
+        )
     );
 
-    const tasks = data.tasks.filter(
+    const tasks = (data?.tasks || []).filter(
       (t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.description.toLowerCase().includes(q) ||
-        t.assigneeName.toLowerCase().includes(q)
+        t && (
+          (t.title && t.title.toLowerCase().includes(q)) ||
+          (t.description && t.description.toLowerCase().includes(q)) ||
+          (t.assigneeName && t.assigneeName.toLowerCase().includes(q))
+        )
     );
 
-    const campaigns = data.campaigns.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.objective.toLowerCase().includes(q)
+    const campaigns = (data?.campaigns || []).filter(
+      (c) =>
+        c && (
+          (c.name && c.name.toLowerCase().includes(q)) ||
+          (c.objective && c.objective.toLowerCase().includes(q))
+        )
     );
 
     return { posts, tasks, campaigns };
@@ -81,21 +89,21 @@ export const GlobalSearchModal: React.FC = () => {
                 Ejemplos: "delegar", "asistente", "carrusel", "anuncios", "Mateo"
               </p>
             </div>
-          ) : results.posts.length === 0 &&
-            results.tasks.length === 0 &&
-            results.campaigns.length === 0 ? (
+          ) : (results.posts || []).length === 0 &&
+            (results.tasks || []).length === 0 &&
+            (results.campaigns || []).length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-400">
               No se encontraron resultados para "{query}".
             </div>
           ) : (
             <>
-              {results.posts.length > 0 && (
+              {(results.posts || []).length > 0 && (
                 <div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                    Publicaciones ({results.posts.length})
+                    Publicaciones ({(results.posts || []).length})
                   </span>
                   <div className="space-y-1.5">
-                    {results.posts.map((post) => (
+                    {(results.posts || []).map((post) => (
                       <div
                         key={post.id}
                         onClick={() => {
@@ -122,13 +130,13 @@ export const GlobalSearchModal: React.FC = () => {
                 </div>
               )}
 
-              {results.tasks.length > 0 && (
+              {(results.tasks || []).length > 0 && (
                 <div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                    Tareas ({results.tasks.length})
+                    Tareas ({(results.tasks || []).length})
                   </span>
                   <div className="space-y-1.5">
-                    {results.tasks.map((task) => (
+                    {(results.tasks || []).map((task) => (
                       <div
                         key={task.id}
                         onClick={() => {
@@ -155,13 +163,13 @@ export const GlobalSearchModal: React.FC = () => {
                 </div>
               )}
 
-              {results.campaigns.length > 0 && (
+              {(results.campaigns || []).length > 0 && (
                 <div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                    Campañas ({results.campaigns.length})
+                    Campañas ({(results.campaigns || []).length})
                   </span>
                   <div className="space-y-1.5">
-                    {results.campaigns.map((camp) => (
+                    {(results.campaigns || []).map((camp) => (
                       <div
                         key={camp.id}
                         onClick={() => {

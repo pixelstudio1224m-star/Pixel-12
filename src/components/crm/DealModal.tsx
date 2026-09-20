@@ -40,6 +40,7 @@ export const DealModal: React.FC<DealModalProps> = ({
     crmCompanies,
     quotes,
     saveDeal,
+    showToast,
     data
   } = useWorkspace();
 
@@ -94,10 +95,10 @@ export const DealModal: React.FC<DealModalProps> = ({
   }, [deal, initialStageId, initialPipelineId, initialContactId, crmPipelines, isOpen]);
 
   // When pipeline changes, adapt stage
-  const currentPipeline = crmPipelines.find((p) => p.id === pipelineId) || crmPipelines[0];
+  const currentPipeline = (crmPipelines || []).find((p) => p.id === pipelineId) || (crmPipelines || [])[0];
 
   useEffect(() => {
-    if (currentPipeline && currentPipeline.stages.length > 0) {
+    if (currentPipeline?.stages && currentPipeline.stages.length > 0) {
       if (!currentPipeline.stages.some((s) => s.id === stageId)) {
         setStageId(currentPipeline.stages[0].id);
       }
@@ -145,8 +146,8 @@ export const DealModal: React.FC<DealModalProps> = ({
         priority,
         tags: parsedTags,
         notes: notes.trim(),
-        assignedToId: data.currentMember.id,
-        assignedToName: data.currentMember.name,
+        assignedToId: data?.currentMember?.id || 'mem_1',
+        assignedToName: data?.currentMember?.name || 'Pixel 12 Specialist',
         associatedQuoteId: associatedQuoteId || undefined,
         createdAt: deal?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -155,8 +156,9 @@ export const DealModal: React.FC<DealModalProps> = ({
       const saved = await saveDeal(newDeal);
       if (onSave) onSave(saved);
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Error saving deal:', err);
+      showToast(err?.message || 'Error al guardar la oportunidad en el CRM', 'error');
     } finally {
       setIsSaving(false);
     }

@@ -28,7 +28,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   onSave
 }) => {
-  const { crmCompanies, plans, customServices, saveContact, data } = useWorkspace();
+  const { crmCompanies, plans, customServices, saveContact, showToast, data } = useWorkspace();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -112,8 +112,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         tags: parsedTags,
         notes: notes.trim(),
         contractedServices: contractedServices.length > 0 ? contractedServices : contact?.contractedServices || [],
-        assignedToId: data.currentMember.id,
-        assignedToName: data.currentMember.name,
+        assignedToId: data?.currentMember?.id || 'mem_1',
+        assignedToName: data?.currentMember?.name || 'Pixel 12 Specialist',
         createdAt: contact?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -121,8 +121,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
       const saved = await saveContact(newContact);
       if (onSave) onSave(saved);
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Error saving contact:', err);
+      showToast(err?.message || 'Error al guardar el contacto en el CRM', 'error');
     } finally {
       setIsSaving(false);
     }

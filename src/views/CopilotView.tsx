@@ -35,11 +35,12 @@ const suggestedPrompts = [
 
 export const CopilotView: React.FC = () => {
   const { activeBrand, addPost, showToast, setActiveView } = useWorkspace();
+  const brandName = activeBrand?.name || 'Pixel 12 Media';
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init_msg',
       sender: 'assistant',
-      text: `¡Hola! Soy el Copiloto Creativo y Estratégico de **Pixel 12 OS** para **${activeBrand.name}**.\n\nPuedo interpretar solicitudes en lenguaje natural y transformarlas en:\n• Carruseles con estructura y diapositivas completas\n• Posts para redes sociales con ganchos y CTAs medidos\n• Guiones dinámicos para Reels y Shorts\n• Artículos de blog optimizados para SEO\n• Campañas y propuestas comerciales\n\n¿Qué contenido o campaña deseas planificar hoy?`,
+      text: `¡Hola! Soy el Copiloto Creativo y Estratégico de **Pixel 12 OS** para **${brandName}**.\n\nPuedo interpretar solicitudes en lenguaje natural y transformarlas en:\n• Carruseles con estructura y diapositivas completas\n• Posts para redes sociales con ganchos y CTAs medidos\n• Guiones dinámicos para Reels y Shorts\n• Artículos de blog optimizados para SEO\n• Campañas y propuestas comerciales\n\n¿Qué contenido o campaña deseas planificar hoy?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -86,9 +87,9 @@ export const CopilotView: React.FC = () => {
 
       const res = await chatWithCopilotAI({
         message: userMsg.text,
-        brandName: activeBrand.name,
-        brandVoice: activeBrand.voice?.tone || 'Profesional y Estratégico',
-        brandAudience: activeBrand.targetAudience || 'Clientes y Audiencia General',
+        brandName: activeBrand?.name || 'Pixel 12 Media',
+        brandVoice: activeBrand?.voice?.tone || 'Profesional y Estratégico',
+        brandAudience: activeBrand?.targetAudience || 'Clientes y Audiencia General',
         history,
       });
 
@@ -125,11 +126,11 @@ export const CopilotView: React.FC = () => {
       internalTitle: titleCandidate,
       caption: text,
       hook: hookCandidate.replace(/^.*?:/i, '').replace(/["']/g, '').trim(),
-      cta: activeBrand.voice?.preferredCTAs?.[0] || 'Comenta para más información',
+      cta: activeBrand?.voice?.preferredCTAs?.[0] || 'Comenta para más información',
       hashtags: ['#Pixel12', '#Marketing', '#Estrategia'],
       format: isCarousel ? 'Carousel' : isReel ? 'Reel' : 'Static Post',
       pillar: 'Educativo',
-      brandId: activeBrand.id,
+      brandId: activeBrand?.id || 'brand_p12',
       status: 'SCHEDULED',
     });
     setIsScheduleModalOpen(true);
@@ -154,7 +155,7 @@ export const CopilotView: React.FC = () => {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-extrabold text-white font-display truncate">
-                Copiloto de IA: {activeBrand.name}
+                Copiloto de IA: {activeBrand?.name || 'Pixel 12 Media'}
               </span>
               <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#E5C158] border border-[#D4AF37]/30 font-bold shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
@@ -162,8 +163,8 @@ export const CopilotView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-zinc-400 truncate max-w-md mt-0.5">
-              Tono: <span className="text-zinc-200 font-medium">{activeBrand.voice?.tone || 'Estratégico'}</span> · Audiencia:{' '}
-              <span className="text-zinc-200 font-medium">{activeBrand.targetAudience || 'General'}</span>
+              Tono: <span className="text-zinc-200 font-medium">{activeBrand?.voice?.tone || 'Estratégico'}</span> · Audiencia:{' '}
+              <span className="text-zinc-200 font-medium">{activeBrand?.targetAudience || 'General'}</span>
             </p>
           </div>
         </div>
@@ -174,7 +175,7 @@ export const CopilotView: React.FC = () => {
               {
                 id: 'init_' + Date.now(),
                 sender: 'assistant',
-                text: `Historial reiniciado. Estoy listo para ayudarte con contenido fresco y estratégico para **${activeBrand.name}**.`,
+                text: `Historial reiniciado. Estoy listo para ayudarte con contenido fresco y estratégico para **${activeBrand?.name || 'Pixel 12 Media'}**.`,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               },
             ]);

@@ -8,7 +8,9 @@ export const TeamCalendarView: React.FC = () => {
 
   const [selectedMember, setSelectedMember] = useState('ALL');
 
-  const tasks = data.tasks.filter((t) => {
+  const tasksList = data?.tasks || [];
+  const tasks = tasksList.filter((t) => {
+    if (!t) return false;
     if (selectedMember !== 'ALL' && t.assigneeId !== selectedMember) return false;
     return true;
   });
@@ -34,7 +36,7 @@ export const TeamCalendarView: React.FC = () => {
             className="text-xs p-2 rounded-lg border border-slate-300 bg-white"
           >
             <option value="ALL">Todo el equipo</option>
-            {data.members.map((m) => (
+            {(data?.members || []).map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name} ({m.role})
               </option>

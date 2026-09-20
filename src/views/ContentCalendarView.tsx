@@ -76,13 +76,15 @@ export const ContentCalendarView: React.FC = () => {
 
   // Filter posts
   const filteredPosts = useMemo(() => {
-    return data.posts.filter((p) => {
+    const posts = data?.posts || [];
+    return posts.filter((p) => {
+      if (!p) return false;
       if (brandFilter !== 'ALL' && p.brandId !== brandFilter) return false;
       if (formatFilter !== 'ALL' && p.format !== formatFilter) return false;
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
       return true;
     });
-  }, [data.posts, brandFilter, formatFilter, statusFilter]);
+  }, [data?.posts, brandFilter, formatFilter, statusFilter]);
 
   // Calendar Grid Calculation (Monday to Sunday)
   const calendarDays = useMemo(() => {
@@ -224,7 +226,7 @@ export const ContentCalendarView: React.FC = () => {
               className="text-xs font-semibold bg-transparent outline-none text-slate-800"
             >
               <option value="ALL">Todas las Marcas</option>
-              {data.brands.map((b) => (
+              {(data?.brands || []).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
@@ -524,7 +526,7 @@ export const ContentCalendarView: React.FC = () => {
                   </h3>
                 </div>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  {selectedDayModal.posts.length} publicación(es) programada(s) para esta fecha
+                  {(selectedDayModal.posts || []).length} publicación(es) programada(s) para esta fecha
                 </p>
               </div>
 
@@ -546,7 +548,7 @@ export const ContentCalendarView: React.FC = () => {
 
             {/* Lista de publicaciones del día */}
             <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
-              {selectedDayModal.posts.map((post) => {
+              {(selectedDayModal.posts || []).map((post) => {
                 const hasSlides = post.slides && post.slides.length > 0;
                 return (
                   <div

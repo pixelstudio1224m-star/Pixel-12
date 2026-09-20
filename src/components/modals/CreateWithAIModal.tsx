@@ -100,15 +100,17 @@ export const CreateWithAIModal: React.FC = () => {
 
     try {
       // Find default members
-      const designer = data.members.find((m) => m.role === 'Designer') || data.members[0];
-      const copywriter = data.members.find((m) => m.role === 'Copywriter') || data.members[0];
-      const cm = data.members.find((m) => m.role === 'Community Manager') || data.members[0];
+      const members = data?.members || [];
+      const designer = members.find((m) => m?.role === 'Designer') || members[0];
+      const copywriter = members.find((m) => m?.role === 'Copywriter') || members[0];
+      const cm = members.find((m) => m?.role === 'Community Manager') || members[0];
 
       // Convert generated posts to workspace posts
       const createdPosts: Post[] = [];
+      const postsToCreate = generatedResult?.posts || [];
 
-      for (let i = 0; i < generatedResult.posts.length; i++) {
-        const p = generatedResult.posts[i];
+      for (let i = 0; i < postsToCreate.length; i++) {
+        const p = postsToCreate[i];
         const newPost: Post = {
           id: 'post_ai_' + Date.now() + '_' + i,
           brandId: activeBrand.id,
@@ -173,8 +175,8 @@ export const CreateWithAIModal: React.FC = () => {
             { id: 'c2', text: 'Ejecutar entregable y adjuntar', completed: false },
           ],
           comments: [],
-          relatedPostId: createdPosts[j % createdPosts.length]?.id,
-          relatedPostTitle: createdPosts[j % createdPosts.length]?.internalTitle,
+          relatedPostId: createdPosts.length > 0 ? createdPosts[j % createdPosts.length]?.id : undefined,
+          relatedPostTitle: createdPosts.length > 0 ? createdPosts[j % createdPosts.length]?.internalTitle : undefined,
           history: [
             {
               id: 'h1',
@@ -422,7 +424,7 @@ export const CreateWithAIModal: React.FC = () => {
                     }`}
                   >
                     <Layers className="w-3.5 h-3.5" />
-                    <span>Publicaciones ({generatedResult.posts.length})</span>
+                    <span>Publicaciones ({generatedResult?.posts?.length || 0})</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('tasks')}

@@ -14,24 +14,47 @@ import {
 } from 'lucide-react';
 
 export const GoogleAdsView: React.FC = () => {
-  const { data, activeBrand, showToast } = useWorkspace();
+  const { data, activeBrand, updateGoogleAds, showToast } = useWorkspace();
+
+  const googleAdsAccount = data?.googleAds || (data as any)?.googleAdsAccount || {
+    status: 'NOT_CONNECTED',
+    customerId: '849-291-0492',
+    campaigns: []
+  };
 
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [developerToken, setDeveloperToken] = useState('');
-  const [customerId, setCustomerId] = useState(data.googleAdsAccount.customerId || '849-291-0492');
+  const [customerId, setCustomerId] = useState(googleAdsAccount.customerId || '849-291-0492');
 
-  const campaigns = data.googleAdsAccount.campaigns || [];
-  const totalSpent = campaigns.reduce((acc, c) => acc + c.spent, 0);
-  const totalConversions = campaigns.reduce((acc, c) => acc + c.conversions, 0);
-  const totalClicks = campaigns.reduce((acc, c) => acc + c.clicks, 0);
+  const campaigns = Array.isArray(googleAdsAccount.campaigns) ? googleAdsAccount.campaigns : [];
+  const totalSpent = campaigns.reduce((acc, c) => acc + (Number(c.spent) || 0), 0);
+  const totalConversions = campaigns.reduce((acc, c) => acc + (Number(c.conversions) || 0), 0);
+  const totalClicks = campaigns.reduce((acc, c) => acc + (Number(c.clicks) || 0), 0);
   const averageCPC = totalClicks > 0 ? (totalSpent / totalClicks).toFixed(2) : '0.00';
 
-  const handleSaveCredentials = (e: React.FormEvent) => {
+  const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
-    data.googleAdsAccount.customerId = customerId;
-    data.googleAdsAccount.status = 'CONNECTED';
+    const updated = {
+      ...googleAdsAccount,
+      customerId: customerId.trim() || '849-291-0492',
+      status: 'CONNECTED' as const,
+      campaigns: campaigns.length > 0 ? campaigns : [
+        {
+          id: 'gads_1',
+          name: `${activeBrand?.name || 'Pixel 12'} · Conversión Leads Search`,
+          status: 'ENABLED' as const,
+          budget: 450,
+          spent: 285.5,
+          clicks: 342,
+          impressions: 4890,
+          conversions: 28,
+          costPerConversion: 10.19
+        }
+      ]
+    };
+    await updateGoogleAds(updated);
     setIsConfiguring(false);
-    showToast('Cuenta de Google Ads actualizada');
+    showToast('Cuenta de Google Ads conectada y guardada con éxito');
   };
 
   return (
@@ -50,8 +73,8 @@ export const GoogleAdsView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              ID de Cliente MCC: <strong className="text-zinc-200 font-mono">{data.googleAdsAccount.customerId}</strong> ·
-              Marca: {activeBrand.name}
+              ID de Cliente MCC: <strong className="text-zinc-200 font-mono">{googleAdsAccount.customerId}</strong> ·
+              Marca: {activeBrand?.name || 'la Marca'}
             </p>
           </div>
         </div>

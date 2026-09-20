@@ -137,8 +137,8 @@ export const DesignContentView: React.FC = () => {
         pillar: selectedPillar,
         style: selectedStyle,
         topic,
-        brandName: activeBrand.name,
-        authorName: 'Alejandro Morales',
+        brandName: activeBrand?.name || 'Pixel 12 Media',
+        authorName: data?.currentMember?.name || 'Alejandro Morales',
       });
 
       clearInterval(stepInterval);
@@ -178,9 +178,10 @@ export const DesignContentView: React.FC = () => {
     setIsScheduling(true);
     try {
       const targetDate = '2026-09-08';
+      const brandId = activeBrand?.id || 'brand_p12';
       const newPost: Post = {
         id: 'post_p12_' + Date.now(),
-        brandId: activeBrand.id,
+        brandId,
         internalTitle: generatedContent.title,
         date: targetDate,
         time: '11:00',
@@ -196,7 +197,7 @@ export const DesignContentView: React.FC = () => {
         visualText: slides[0]?.headline || generatedContent.title,
         visualDescription: generatedContent.visualConcept,
         status: 'APPROVED',
-        assigneeName: data.currentMember.name || 'Alejandro Morales',
+        assigneeName: data?.currentMember?.name || 'Alejandro Morales',
         relatedTaskIds: [],
         slides: slides,
         hasGeneratedDesign: true,
@@ -224,7 +225,7 @@ export const DesignContentView: React.FC = () => {
         for (const task of generatedContent.suggestedTasks) {
           await addTask({
             id: 'task_p12_' + Math.random().toString(36).substring(2, 9),
-            brandId: activeBrand.id,
+            brandId,
             title: task.title,
             description: task.description,
             priority: task.priority,

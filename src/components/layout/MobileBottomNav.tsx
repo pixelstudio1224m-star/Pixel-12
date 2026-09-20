@@ -12,8 +12,8 @@ import {
 export const MobileBottomNav: React.FC = () => {
   const { activeView, setActiveView, toggleMobileDrawer, isMobileDrawerOpen, data } = useWorkspace();
 
-  const pendingTasksCount = data.tasks.filter(
-    (t) => t.status !== 'COMPLETED' && t.status !== 'CANCELLED'
+  const pendingTasksCount = (data?.tasks || []).filter(
+    (t) => t && t.status !== 'COMPLETED' && t.status !== 'CANCELLED'
   ).length;
 
   const navItems = [

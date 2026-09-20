@@ -42,13 +42,20 @@ export const CrmContactsTable: React.FC<CrmContactsTableProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStageFilter, setSelectedStageFilter] = useState<string>('ALL');
 
-  const filteredContacts = crmContacts.filter((c) => {
+  const filteredContacts = (crmContacts || []).filter((c) => {
+    if (!c) return false;
+    const name = c.fullName || '';
+    const email = c.email || '';
+    const company = c.companyName || '';
+    const phone = c.phone || '';
+    const tags = Array.isArray(c.tags) ? c.tags : [];
+
     const matchesSearch =
-      c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.companyName && c.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (c.phone && c.phone.includes(searchTerm)) ||
-      (c.tags && c.tags.some((t) => t.toLowerCase().includes(searchTerm.toLowerCase())));
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      phone.includes(searchTerm) ||
+      tags.some((t) => t && t.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStage =
       selectedStageFilter === 'ALL' || c.lifecycleStage === selectedStageFilter;
@@ -135,7 +142,7 @@ export const CrmContactsTable: React.FC<CrmContactsTableProps> = ({
             <tbody className="divide-y divide-[#1C1C2C] text-xs">
               {filteredContacts.length > 0 ? (
                 filteredContacts.map((contact) => {
-                  const deals = crmDeals.filter((d) => d.contactId === contact.id);
+                  const deals = (crmDeals || []).filter((d) => d.contactId === contact.id);
                   const dealsVal = deals.reduce((acc, d) => acc + (d.value || 0), 0);
                   const stageInfo =
                     stageBadgeStyle[contact.lifecycleStage] || stageBadgeStyle.LEAD;

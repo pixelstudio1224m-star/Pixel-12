@@ -5,10 +5,19 @@ import { UserCheck, CheckCircle2, Clock, Calendar, FileText, Kanban } from 'luci
 export const MyCalendarView: React.FC = () => {
   const { data, openTaskDetail, openPostDetail } = useWorkspace();
 
-  const currentMember = data.currentMember;
+  const currentMember = data?.currentMember || {
+    id: 'user-default',
+    name: 'Usuario',
+    email: 'user@pixel12.agency',
+    role: 'Editor',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+  };
 
-  const myTasks = data.tasks.filter((t) => t.assigneeId === currentMember.id);
-  const myPosts = data.posts.filter((p) => p.assigneeId === currentMember.id);
+  const tasks = data?.tasks || [];
+  const posts = data?.posts || [];
+
+  const myTasks = tasks.filter((t) => t && t.assigneeId === currentMember.id);
+  const myPosts = posts.filter((p) => p && p.assigneeId === currentMember.id);
 
   return (
     <div id="my-calendar-view" className="p-6 space-y-6 max-w-7xl mx-auto">

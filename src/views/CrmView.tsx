@@ -38,6 +38,7 @@ import { CrmCompaniesList } from '../components/crm/CrmCompaniesList';
 import { DealModal } from '../components/crm/DealModal';
 import { ContactModal } from '../components/crm/ContactModal';
 import { ContactDetailModal } from '../components/crm/ContactDetailModal';
+import { PipelineSettingsModal } from '../components/crm/PipelineSettingsModal';
 import { CommercialAIModal } from '../components/crm/CommercialAIModal';
 
 type CrmTab = 'pipeline' | 'contacts' | 'companies' | 'followups';
@@ -87,19 +88,23 @@ export const CrmView: React.FC = () => {
 
   // Metrics Calculations
   const metrics = useMemo(() => {
-    const activeDeals = crmDeals.filter(
-      (d) => d.stageId !== 'won' && d.stageId !== 'lost' && d.stageId !== 'stage_won' && d.stageId !== 'stage_lost'
+    const deals = crmDeals || [];
+    const contacts = crmContacts || [];
+    const followUps = crmFollowUps || [];
+
+    const activeDeals = deals.filter(
+      (d) => d && d.stageId !== 'won' && d.stageId !== 'lost' && d.stageId !== 'stage_won' && d.stageId !== 'stage_lost'
     );
-    const wonDeals = crmDeals.filter(
-      (d) => d.stageId === 'won' || d.stageId === 'stage_won'
+    const wonDeals = deals.filter(
+      (d) => d && (d.stageId === 'won' || d.stageId === 'stage_won')
     );
     const pipelineValue = activeDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
     const wonValue = wonDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
-    const totalFinished = wonDeals.length + crmDeals.filter(d => d.stageId === 'lost' || d.stageId === 'stage_lost').length;
+    const totalFinished = wonDeals.length + deals.filter(d => d && (d.stageId === 'lost' || d.stageId === 'stage_lost')).length;
     const winRate = totalFinished > 0 ? Math.round((wonDeals.length / totalFinished) * 100) : 45;
 
-    const pendingFollowUps = crmFollowUps.filter((f) => f.status === 'PENDING').length;
-    const totalClients = crmContacts.filter((c) => c.lifecycleStage === 'CUSTOMER').length;
+    const pendingFollowUps = followUps.filter((f) => f && f.status === 'PENDING').length;
+    const totalClients = contacts.filter((c) => c && c.lifecycleStage === 'CUSTOMER').length;
 
     return {
       activeDealsCount: activeDeals.length,
@@ -107,7 +112,7 @@ export const CrmView: React.FC = () => {
       wonValue,
       winRate,
       pendingFollowUps,
-      totalContacts: crmContacts.length,
+      totalContacts: contacts.length,
       totalClients
     };
   }, [crmDeals, crmContacts, crmFollowUps]);
@@ -267,7 +272,7 @@ export const CrmView: React.FC = () => {
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-bold font-mono text-white tracking-tight">
-              {crmCompanies.length}
+              {crmCompanies?.length || 0}
             </div>
             <div className="text-[11px] text-zinc-400 mt-0.5">
               Marcas B2B registradas
@@ -297,7 +302,7 @@ export const CrmView: React.FC = () => {
         {[
           { id: 'pipeline', label: 'Pipeline de Ventas (Kanban)', icon: Kanban, count: metrics.activeDealsCount },
           { id: 'contacts', label: 'Contactos & Leads', icon: Users, count: metrics.totalContacts },
-          { id: 'companies', label: 'Empresas & Cuentas', icon: Building2, count: crmCompanies.length },
+          { id: 'companies', label: 'Empresas & Cuentas', icon: Building2, count: (crmCompanies || []).length },
           { id: 'followups', label: 'Seguimientos & Agenda', icon: Clock, count: metrics.pendingFollowUps, alert: metrics.pendingFollowUps > 0 }
         ].map((tab) => {
           const Icon = tab.icon;
@@ -384,7 +389,7 @@ export const CrmView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (crmContacts.length > 0) {
+                  if ((crmContacts?.length || 0) > 0) {
                     handleSelectContactDetail(crmContacts[0]);
                   } else {
                     handleOpenNewContact();
@@ -399,8 +404,8 @@ export const CrmView: React.FC = () => {
 
             {/* Follow-ups List */}
             <div className="space-y-2.5">
-              {crmFollowUps
-                .filter((f) => (followUpFilter === 'ALL' ? true : f.status === followUpFilter))
+              {(crmFollowUps || [])
+                .filter((f) => f && (followUpFilter === 'ALL' ? true : f.status === followUpFilter))
                 .map((item) => {
                   const isDone = item.status === 'DONE';
                   const isHigh = item.priority === 'HIGH';
@@ -498,7 +503,7 @@ export const CrmView: React.FC = () => {
                   );
                 })}
 
-              {crmFollowUps.length === 0 && (
+              {(crmFollowUps?.length || 0) === 0 && (
                 <div className="text-center py-12 bg-[#101018] rounded-2xl border border-dashed border-[#222232] text-zinc-500">
                   <Clock className="w-8 h-8 mx-auto mb-2 text-zinc-600" />
                   <p className="text-xs font-medium">No hay seguimientos registrados aún.</p>
@@ -555,6 +560,12 @@ export const CrmView: React.FC = () => {
         isOpen={isCommercialAIOpen}
         onClose={closeCommercialAI}
         initialData={commercialAIInitialData}
+      />
+
+      {/* 5. Pipeline Settings Modal */}
+      <PipelineSettingsModal
+        isOpen={isPipelineSettingsOpen}
+        onClose={() => setIsPipelineSettingsOpen(false)}
       />
     </div>
   );

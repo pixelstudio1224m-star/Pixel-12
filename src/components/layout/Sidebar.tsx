@@ -45,11 +45,15 @@ export const Sidebar: React.FC = () => {
   const { user, profile, role, logout, canAccessCrm, canManageSettings, isClient } = useAuth();
   const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
 
-  const pendingApprovalsCount = data.posts.filter((p) => p.status === 'IN_REVIEW').length;
-  const myPendingTasksCount = data.tasks.filter(
-    (t) => t.assigneeId === data.currentMember.id && t.status !== 'COMPLETED' && t.status !== 'CANCELLED'
+  const posts = data?.posts || [];
+  const tasks = data?.tasks || [];
+  const currentMemberId = data?.currentMember?.id;
+
+  const pendingApprovalsCount = posts.filter((p) => p && p.status === 'IN_REVIEW').length;
+  const myPendingTasksCount = tasks.filter(
+    (t) => t && t.assigneeId === currentMemberId && t.status !== 'COMPLETED' && t.status !== 'CANCELLED'
   ).length;
-  const activeDealsCount = data.crmDeals ? data.crmDeals.filter((d) => !['LOST', 'WON'].includes(d.stageId)).length : 0;
+  const activeDealsCount = data?.crmDeals ? data.crmDeals.filter((d) => d && !['LOST', 'WON'].includes(d.stageId)).length : 0;
 
   // Role-based navigation partitions
   const navGroups = isClient
@@ -192,7 +196,7 @@ export const Sidebar: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col gap-3 border-b border-[#222232]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {data.workspaceSettings.brandIdentity?.officialLogoUrl ? (
+              {data?.workspaceSettings?.brandIdentity?.officialLogoUrl ? (
                 <div className="h-8 max-w-[120px] flex items-center justify-center shrink-0">
                   <img
                     src={data.workspaceSettings.brandIdentity.officialLogoUrl}
@@ -214,7 +218,7 @@ export const Sidebar: React.FC = () => {
                   PIXEL 12 OS
                 </span>
                 <span className="text-[10px] text-zinc-400 font-medium truncate mt-1">
-                  {data.workspaceSettings.agencyType || 'Marketing & Content Studio'}
+                  {data?.workspaceSettings?.agencyType || 'Marketing & Content Studio'}
                 </span>
               </div>
             </div>
@@ -239,7 +243,7 @@ export const Sidebar: React.FC = () => {
           >
             <div className="flex items-center gap-2 truncate">
               <Building2 className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-              <span className="truncate">{activeBrand.name}</span>
+              <span className="truncate">{activeBrand?.name || 'Pixel 12 Media'}</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
           </button>
@@ -249,7 +253,7 @@ export const Sidebar: React.FC = () => {
               <div className="px-3 py-1 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
                 Marcas del Workspace
               </div>
-              {data.brands.map((b) => (
+              {(data?.brands || []).map((b) => (
                 <button
                   key={b.id}
                   onClick={() => {
@@ -257,11 +261,11 @@ export const Sidebar: React.FC = () => {
                     setBrandDropdownOpen(false);
                   }}
                   className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-[#1A1A28] transition-colors ${
-                    b.id === activeBrand.id ? 'text-[#E5C158] font-bold bg-[#171724]' : 'text-zinc-300'
+                    b.id === activeBrand?.id ? 'text-[#E5C158] font-bold bg-[#171724]' : 'text-zinc-300'
                   }`}
                 >
                   <span className="truncate">{b.name}</span>
-                  {b.id === activeBrand.id && <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></span>}
+                  {b.id === activeBrand?.id && <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></span>}
                 </button>
               ))}
               <div className="border-t border-[#222232] mt-1 pt-1">

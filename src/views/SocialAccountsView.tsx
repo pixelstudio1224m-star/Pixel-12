@@ -76,7 +76,7 @@ export const SocialAccountsView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Conexión directa con APIs oficiales para publicación y sincronización en los canales de {activeBrand.name}
+              Conexión directa con APIs oficiales para publicación y sincronización en los canales de {activeBrand?.name || 'la Marca'}
             </p>
           </div>
         </div>
@@ -101,7 +101,7 @@ export const SocialAccountsView: React.FC = () => {
 
       {/* Accounts List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data.socialAccounts.map((acc) => {
+        {(data?.socialAccounts || []).map((acc) => {
           const Icon = platformIcons[acc.platform] || Share2;
           const isReallyConnected = acc.isConnected && !!acc.credentials?.accessToken;
           return (

@@ -29,7 +29,7 @@ export const AnalyticsView: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-900">Métricas & Analítica de Redes</h3>
             <p className="text-xs text-slate-500">
-              Rendimiento multicanal consolidado para {activeBrand.name}
+              Rendimiento multicanal consolidado para {activeBrand?.name || 'la Marca'}
             </p>
           </div>
         </div>

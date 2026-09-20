@@ -31,20 +31,25 @@ export const PostsView: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filteredPosts = useMemo(() => {
-    return data.posts.filter((p) => {
+    const posts = data?.posts || [];
+    return posts.filter((p) => {
+      if (!p) return false;
       if (formatFilter !== 'ALL' && p.format !== formatFilter) return false;
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
+        const title = p.internalTitle || '';
+        const hook = p.hook || '';
+        const caption = p.caption || '';
         return (
-          p.internalTitle.toLowerCase().includes(q) ||
-          p.hook.toLowerCase().includes(q) ||
-          p.caption.toLowerCase().includes(q)
+          title.toLowerCase().includes(q) ||
+          hook.toLowerCase().includes(q) ||
+          caption.toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [data.posts, formatFilter, statusFilter, search]);
+  }, [data?.posts, formatFilter, statusFilter, search]);
 
   const toggleSelectPost = (postId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();

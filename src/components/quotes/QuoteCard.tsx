@@ -164,11 +164,11 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
 
         {/* Deliverables snippet */}
         <div className="flex items-center gap-1.5 flex-wrap mb-4">
-          <span className="text-[11px] text-zinc-500">{quote.items.length} ítems incluidos</span>
+          <span className="text-[11px] text-zinc-500">{(quote.items || []).length} ítems incluidos</span>
           {quote.visuals && quote.visuals.length > 0 && (
             <span className="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded flex items-center gap-1">
               <Sparkles className="w-2.5 h-2.5 text-[#D4AF37]" />
-              {quote.visuals.length} visuales
+              {(quote.visuals || []).length} visuales
             </span>
           )}
         </div>

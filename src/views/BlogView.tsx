@@ -43,11 +43,12 @@ export const BlogView: React.FC = () => {
 
   // Metrics
   const metrics = useMemo(() => {
-    const total = blogPosts.length;
-    const published = blogPosts.filter((b) => b.status === 'PUBLISHED').length;
-    const inReview = blogPosts.filter((b) => b.status === 'IN_REVIEW' || b.status === 'APPROVED').length;
+    const posts = blogPosts || [];
+    const total = posts.length;
+    const published = posts.filter((b) => b && b.status === 'PUBLISHED').length;
+    const inReview = posts.filter((b) => b && (b.status === 'IN_REVIEW' || b.status === 'APPROVED')).length;
     const avgSeo = total > 0
-      ? Math.round(blogPosts.reduce((acc, b) => acc + (b.seo?.score || 90), 0) / total)
+      ? Math.round(posts.reduce((acc, b) => acc + (b?.seo?.score || 90), 0) / total)
       : 92;
     return { total, published, inReview, avgSeo };
   }, [blogPosts]);
@@ -55,20 +56,27 @@ export const BlogView: React.FC = () => {
   // Categories list
   const categories = useMemo(() => {
     const set = new Set<string>();
-    blogPosts.forEach((b) => {
-      if (b.category) set.add(b.category);
+    (blogPosts || []).forEach((b) => {
+      if (b && b.category) set.add(b.category);
     });
     return Array.from(set);
   }, [blogPosts]);
 
   // Filtered posts
   const filteredPosts = useMemo(() => {
-    return blogPosts.filter((post) => {
+    return (blogPosts || []).filter((post) => {
+      if (!post) return false;
+      const title = post.title || '';
+      const excerpt = post.excerpt || '';
+      const focus = post.seo?.focusKeyword || '';
+      const category = post.category || '';
+      const q = searchQuery.toLowerCase();
+
       const matchesSearch =
-        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (post.seo?.focusKeyword && post.seo.focusKeyword.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        post.category.toLowerCase().includes(searchQuery.toLowerCase());
+        title.toLowerCase().includes(q) ||
+        excerpt.toLowerCase().includes(q) ||
+        focus.toLowerCase().includes(q) ||
+        category.toLowerCase().includes(q);
 
       const matchesStatus = statusFilter === 'ALL' || post.status === statusFilter;
       const matchesCategory = categoryFilter === 'ALL' || post.category === categoryFilter;

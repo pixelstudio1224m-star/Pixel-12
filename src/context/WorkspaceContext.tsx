@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import {
   WorkspaceData,
   Post,
+  Platform,
   Task,
   Campaign,
   CampaignStatus,
@@ -16,6 +17,7 @@ import {
   CommercialSettings,
   ImageLibraryItem,
   QuoteStatus,
+  SocialAccount,
   CrmContact,
   CrmCompany,
   CrmDeal,
@@ -23,7 +25,8 @@ import {
   CrmActivity,
   CrmFollowUp,
   CommercialAIGenerateRequest,
-  CommercialAIGenerateResponse
+  CommercialAIGenerateResponse,
+  GoogleAdsAccount
 } from '../types';
 import { initialWorkspaceData } from '../lib/defaultData';
 import { initialBlogPosts } from '../lib/blogData';
@@ -82,7 +85,11 @@ import {
   updateCrmFollowUpStatusApi,
   deleteCrmFollowUpApi,
   saveCrmActivityApi,
-  generateCommercialAIApi
+  generateCommercialAIApi,
+  deactivateTeamMemberApi,
+  reactivateTeamMemberApi,
+  deleteClientApi,
+  bulkImportPostsApi
 } from '../lib/api';
 
 export type ViewType =
@@ -148,10 +155,14 @@ interface WorkspaceContextType {
   deleteCampaign: (campaignId: string) => Promise<void>;
   archiveCampaign: (campaignId: string) => Promise<void>;
   restoreCampaign: (campaignId: string) => Promise<void>;
-  // Brand Operations
+  // Brand & Client Operations
   addBrand: (brand: Brand) => Promise<void>;
   updateBrand: (brand: Brand) => Promise<void>;
   deleteBrand: (brandId: string) => Promise<void>;
+  deleteClient: (clientId: string) => Promise<void>;
+  // Team Management
+  deactivateTeamMember: (memberId: string) => Promise<void>;
+  reactivateTeamMember: (memberId: string) => Promise<void>;
   // Settings
   updateSettings: (settings: Partial<WorkspaceData['workspaceSettings']>) => Promise<void>;
   // Modals
@@ -174,8 +185,14 @@ interface WorkspaceContextType {
   toasts: ToastInfo[];
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   dismissToast: (id: string) => void;
-  // Bulk Post Import
-  bulkImportPosts: (newPosts: Post[]) => Promise<void>;
+  // Matrix & Calendar Content Pipeline
+  bulkImportPosts: (
+    newPosts: Partial<Post>[],
+    defaultBrandId?: string,
+    duplicateStrategy?: 'skip' | 'update' | 'create'
+  ) => Promise<{ importedCount: number; updatedCount: number; skippedCount: number }>;
+  schedulePostToCalendar: (postId: string, date?: string, time?: string) => Promise<void>;
+  scheduleAllPostsToCalendar: (postIds?: string[]) => Promise<{ scheduledCount: number }>;
   // Blog Operations (Pixel 12 Engine)
   blogPosts: BlogPost[];
   selectedBlog: BlogPost | null;
@@ -211,7 +228,7 @@ interface WorkspaceContextType {
   isCreateQuoteOpen: boolean;
   setIsCreateQuoteOpen: (open: boolean) => void;
   createQuote: (quote: Partial<QuoteProposal>) => Promise<QuoteProposal>;
-  updateQuote: (id: string, updates: Partial<QuoteProposal>) => Promise<QuoteProposal>;
+  updateQuote: (idOrQuote: string | QuoteProposal, updates?: Partial<QuoteProposal>) => Promise<QuoteProposal>;
   deleteQuote: (id: string) => Promise<void>;
   duplicateQuote: (id: string) => Promise<QuoteProposal>;
   updateQuoteStatus: (id: string, status: QuoteStatus) => Promise<void>;
@@ -269,6 +286,8 @@ interface WorkspaceContextType {
   commercialAIInitialData: any;
   openCommercialAI: (initialData?: any) => void;
   closeCommercialAI: () => void;
+  updateSocialAccount: (account: SocialAccount) => Promise<void>;
+  updateGoogleAds: (account: GoogleAdsAccount) => Promise<void>;
   reloadWorkspaceData: () => Promise<void>;
 }
 
@@ -480,8 +499,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, []);
 
+  const brands = Array.isArray(data?.brands) && data.brands.length > 0 ? data.brands : initialWorkspaceData.brands;
   const activeBrand =
-    data.brands.find((b) => b.id === data.activeBrandId) || data.brands[0] || initialWorkspaceData.brands[0];
+    brands.find((b) => b.id === data?.activeBrandId) || brands[0] || initialWorkspaceData.brands[0];
 
   const setActiveBrandId = useCallback(
     (brandId: string) => {
@@ -503,14 +523,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         auditLogs: [
           {
             id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
+            actorName: data.currentMember?.name || 'Administrador',
             action: 'Creó publicación',
             entityType: 'post',
             entityId: post.id,
             details: post.internalTitle,
             timestamp: new Date().toISOString(),
           },
-          ...data.auditLogs,
+          ...(data.auditLogs || []),
         ],
       };
       await persistState(updated);
@@ -527,14 +547,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         auditLogs: [
           {
             id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
+            actorName: data.currentMember?.name || 'Administrador',
             action: 'Actualizó publicación',
             entityType: 'post',
             entityId: updatedPost.id,
             details: updatedPost.internalTitle,
             timestamp: new Date().toISOString(),
           },
-          ...data.auditLogs,
+          ...(data.auditLogs || []),
         ],
       };
       await persistState(updated);
@@ -555,14 +575,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         auditLogs: [
           {
             id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
+            actorName: data.currentMember?.name || 'Administrador',
             action: 'Eliminó publicación',
             entityType: 'post',
             entityId: postId,
             details: target ? target.internalTitle : postId,
             timestamp: new Date().toISOString(),
           },
-          ...data.auditLogs,
+          ...(data.auditLogs || []),
         ],
       };
       await persistState(updated);
@@ -584,14 +604,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         auditLogs: [
           {
             id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
+            actorName: data.currentMember?.name || 'Administrador',
             action: 'Eliminó publicaciones en lote',
             entityType: 'post',
             entityId: postIds.join(','),
             details: `Eliminó ${count} publicaciones`,
             timestamp: new Date().toISOString(),
           },
-          ...data.auditLogs,
+          ...(data.auditLogs || []),
         ],
       };
       await persistState(updated);
@@ -617,8 +637,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const approvalEntry = {
         id: 'appr_' + Date.now(),
-        reviewerId: data.currentMember.id,
-        reviewerName: data.currentMember.name,
+        reviewerId: data.currentMember?.id || 'mem_1',
+        reviewerName: data.currentMember?.name || 'Administrador',
         action: (newStatus === 'APPROVED' ? 'APPROVED' : newStatus === 'CHANGES_REQUESTED' ? 'CHANGES_REQUESTED' : 'SUBMITTED') as any,
         comment: comment || `Estado cambiado a ${newStatus}`,
         timestamp: new Date().toISOString(),
@@ -628,13 +648,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ...post,
         status: newStatus,
         updatedAt: new Date().toISOString(),
-        approvalHistory: [approvalEntry, ...post.approvalHistory],
+        approvalHistory: [approvalEntry, ...(post.approvalHistory || [])],
       };
 
       const newNotif: NotificationItem = {
         id: 'notif_' + Date.now(),
         title: `Estado de post: ${newStatus}`,
-        message: `${data.currentMember.name} marcó "${post.internalTitle}" como ${newStatus}`,
+        message: `${data.currentMember?.name || 'Usuario'} marcó "${post.internalTitle}" como ${newStatus}`,
         type: 'approval',
         read: false,
         timestamp: new Date().toISOString(),
@@ -644,18 +664,18 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const updated: WorkspaceData = {
         ...data,
         posts: data.posts.map((p) => (p.id === postId ? updatedPost : p)),
-        notifications: [newNotif, ...data.notifications],
+        notifications: [newNotif, ...(data.notifications || [])],
         auditLogs: [
           {
             id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
+            actorName: data.currentMember?.name || 'Administrador',
             action: `Cambio de estado post a ${newStatus}`,
             entityType: 'approval',
             entityId: postId,
             details: comment || post.internalTitle,
             timestamp: new Date().toISOString(),
           },
-          ...data.auditLogs,
+          ...(data.auditLogs || []),
         ],
       };
 
@@ -677,14 +697,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         auditLogs: [
           {
             id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
+            actorName: data.currentMember?.name || 'Administrador',
             action: 'Creó tarea',
             entityType: 'task',
             entityId: task.id,
             details: task.title,
             timestamp: new Date().toISOString(),
           },
-          ...data.auditLogs,
+          ...(data.auditLogs || []),
         ],
       };
       await persistState(updated);
@@ -730,7 +750,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const historyEntry = {
         id: 'h_' + Date.now(),
-        authorName: data.currentMember.name,
+        authorName: data.currentMember?.name || 'Administrador',
         action: `Estado cambiado a ${newStatus}`,
         timestamp: new Date().toISOString(),
       };
@@ -738,7 +758,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const updatedTask: Task = {
         ...task,
         status: newStatus,
-        history: [historyEntry, ...task.history],
+        history: [historyEntry, ...(task.history || [])],
       };
 
       // Check if related post should advance to IN_REVIEW when task completed
@@ -813,14 +833,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         auditLogs: [
           {
             id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
+            actorName: data.currentMember?.name || 'Administrador',
             action: 'Eliminó proyecto / campaña',
             entityType: 'campaign',
             entityId: campaignId,
             details: `Eliminó el proyecto "${target?.name || campaignId}" sin afectar a otros clientes`,
             timestamp: new Date().toISOString(),
           },
-          ...data.auditLogs,
+          ...(data.auditLogs || []),
         ],
       };
       await persistState(updated);
@@ -864,7 +884,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     async (brand: Brand) => {
       const updated: WorkspaceData = {
         ...data,
-        brands: [...data.brands, brand],
+        brands: [...(data.brands || []), brand],
         activeBrandId: brand.id,
       };
       await persistState(updated);
@@ -887,33 +907,171 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteBrand = useCallback(
     async (brandId: string) => {
-      if (data.brands.length <= 1) {
-        showToast('No puedes eliminar la única marca del espacio de trabajo', 'error');
+      if (brandId === 'brand_pixel12') {
+        showToast('No puedes eliminar la marca principal de Pixel 12 Studio. Es obligatoria para el sistema.', 'error');
         return;
       }
-      const targetBrand = data.brands.find((b) => b.id === brandId);
-      const remainingBrands = data.brands.filter((b) => b.id !== brandId);
-      const newActiveId = data.activeBrandId === brandId ? remainingBrands[0].id : data.activeBrandId;
+      if ((data?.brands?.length || 0) <= 1) {
+        showToast('No puedes eliminar el único cliente del espacio de trabajo', 'error');
+        return;
+      }
 
-      const updated: WorkspaceData = {
-        ...data,
-        brands: remainingBrands,
-        activeBrandId: newActiveId,
-        auditLogs: [
-          {
-            id: 'log_' + Date.now(),
-            actorName: data.currentMember.name,
-            action: 'Eliminó cliente / marca',
-            entityType: 'settings',
-            entityId: brandId,
-            details: `Eliminó la marca "${targetBrand?.name || brandId}"`,
-            timestamp: new Date().toISOString(),
-          },
-          ...data.auditLogs,
-        ],
-      };
-      await persistState(updated);
-      showToast(`Cliente "${targetBrand?.name || ''}" eliminado del workspace`);
+      const targetBrand = (data?.brands || []).find((b) => b.id === brandId);
+      if (!targetBrand) {
+        showToast('Cliente no encontrado', 'error');
+        return;
+      }
+
+      try {
+        // 1. Llamada al backend Node/Express para eliminación real y persistente
+        const apiRes = await deleteClientApi(brandId, data.currentMember?.role);
+
+        // 2. Limpieza en cascada del estado local
+        const remainingBrands = data.brands.filter((b) => b.id !== brandId);
+        const newActiveId = apiRes.newActiveBrandId || (data.activeBrandId === brandId ? remainingBrands[0]?.id : data.activeBrandId);
+
+        // Limpiar posts, campañas y tareas vinculadas
+        const remainingPosts = (data.posts || []).filter((p) => p.brandId !== brandId);
+        const remainingCampaigns = (data.campaigns || []).filter((c) => c.brandId !== brandId);
+        const remainingTasks = (data.tasks || []).filter((t) => t.brandId !== brandId);
+
+        // Limpiar registros CRM vinculados para evitar huérfanos
+        const clientNameLower = (targetBrand.name || '').toLowerCase().trim();
+        const linkedCompanyIds = (crmCompanies || [])
+          .filter((c) => (c.name && c.name.toLowerCase().trim() === clientNameLower) || (c as any).brandId === brandId)
+          .map((c) => c.id);
+
+        const remainingCompanies = (crmCompanies || []).filter((c) => !linkedCompanyIds.includes(c.id));
+        const remainingContacts = (crmContacts || []).filter((c) => !linkedCompanyIds.includes(c.companyId));
+        const remainingDeals = (crmDeals || []).filter((d) => !linkedCompanyIds.includes(d.companyId));
+
+        setCrmCompanies(remainingCompanies);
+        setCrmContacts(remainingContacts);
+        setCrmDeals(remainingDeals);
+
+        const updated: WorkspaceData = {
+          ...data,
+          brands: remainingBrands,
+          activeBrandId: newActiveId,
+          posts: remainingPosts,
+          campaigns: remainingCampaigns,
+          tasks: remainingTasks,
+          crmCompanies: remainingCompanies,
+          crmContacts: remainingContacts,
+          crmDeals: remainingDeals,
+          auditLogs: [
+            {
+              id: 'log_' + Date.now(),
+              actorName: data.currentMember?.name || 'Administrador',
+              action: 'Eliminó cliente y registros asociados',
+              entityType: 'settings',
+              entityId: brandId,
+              details: `Eliminó el cliente "${targetBrand.name}" y sus registros relacionados en backend y base de datos.`,
+              timestamp: new Date().toISOString(),
+            },
+            ...(data.auditLogs || []),
+          ],
+        };
+
+        // 3. Persistir en Firestore y caché local
+        await persistState(updated);
+        showToast(apiRes.message || `Cliente "${targetBrand.name}" eliminado correctamente`);
+      } catch (err: any) {
+        showToast(err.message || 'Error al eliminar el cliente en backend', 'error');
+        throw err;
+      }
+    },
+    [data, crmCompanies, crmContacts, crmDeals, persistState, showToast]
+  );
+
+  // Alias para clientes
+  const deleteClient = deleteBrand;
+
+  // Gestión de Miembros del Equipo (Sincronización Total Backend + Estado + Firestore)
+  const deactivateTeamMember = useCallback(
+    async (memberId: string) => {
+      try {
+        const result = await deactivateTeamMemberApi(memberId, data.currentMember?.role);
+
+        const updatedMembers = data.members.map((m) =>
+          m.id === memberId ? { ...m, status: 'inactive' as const, deactivatedAt: new Date().toISOString() } : m
+        );
+
+        const updatedInvitations = (data.invitations || []).map((inv) =>
+          inv.email?.toLowerCase() === result.member?.email?.toLowerCase() && inv.status === 'pending'
+            ? { ...inv, status: 'revoked' as const }
+            : inv
+        );
+
+        const targetName = result.member?.name || data.members.find((m) => m.id === memberId)?.name || 'Colaborador';
+
+        const updated: WorkspaceData = {
+          ...data,
+          members: updatedMembers,
+          invitations: updatedInvitations,
+          auditLogs: [
+            {
+              id: 'log_' + Date.now(),
+              actorName: data.currentMember?.name || 'Administrador',
+              action: 'Dio de baja a miembro del equipo',
+              entityType: 'team',
+              entityId: memberId,
+              details: `Desactivó el acceso para ${targetName}. Tareas e historial conservados íntegros.`,
+              timestamp: new Date().toISOString(),
+            },
+            ...(data.auditLogs || []),
+          ],
+        };
+
+        await persistState(updated);
+        showToast(`Acceso revocado para ${targetName}. Tareas e historial resguardados.`);
+      } catch (err: any) {
+        showToast(err.message || 'Error al dar de baja al miembro', 'error');
+        throw err;
+      }
+    },
+    [data, persistState, showToast]
+  );
+
+  const reactivateTeamMember = useCallback(
+    async (memberId: string) => {
+      try {
+        const result = await reactivateTeamMemberApi(memberId, data.currentMember?.role);
+
+        const updatedMembers = data.members.map((m) => {
+          if (m.id === memberId) {
+            const copy = { ...m, status: 'active' as const };
+            delete (copy as any).deactivatedAt;
+            return copy;
+          }
+          return m;
+        });
+
+        const targetName = result.member?.name || data.members.find((m) => m.id === memberId)?.name || 'Colaborador';
+
+        const updated: WorkspaceData = {
+          ...data,
+          members: updatedMembers,
+          auditLogs: [
+            {
+              id: 'log_' + Date.now(),
+              actorName: data.currentMember?.name || 'Administrador',
+              action: 'Reactivó a miembro del equipo',
+              entityType: 'team',
+              entityId: memberId,
+              details: `Restableció el acceso al sistema para ${targetName}.`,
+              timestamp: new Date().toISOString(),
+            },
+            ...(data.auditLogs || []),
+          ],
+        };
+
+        await persistState(updated);
+        showToast(`Acceso restablecido para ${targetName}.`);
+      } catch (err: any) {
+        showToast(err.message || 'Error al reactivar el miembro', 'error');
+        throw err;
+      }
     },
     [data, persistState, showToast]
   );
@@ -934,15 +1092,196 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [data, persistState, showToast]
   );
 
-  // Bulk import
+  // Bulk import con sincronización en backend y Firestore
   const bulkImportPosts = useCallback(
-    async (newPosts: Post[]) => {
-      const updated: WorkspaceData = {
-        ...data,
-        posts: [...newPosts, ...data.posts],
+    async (
+      newPosts: Partial<Post>[],
+      defaultBrandId?: string,
+      duplicateStrategy: 'skip' | 'update' | 'create' = 'skip'
+    ) => {
+      const targetBrandId = defaultBrandId || data.activeBrandId || 'brand_pixel12';
+
+      try {
+        // 1. Persistencia directa en backend
+        await bulkImportPostsApi({
+          posts: newPosts,
+          defaultBrandId: targetBrandId,
+          duplicateStrategy,
+        }).catch((e) => console.warn('[Backend] Bulk post sync notice:', e));
+
+        // 2. Procesamiento y actualización del estado de React
+        let currentPosts = [...data.posts];
+        let imported = 0;
+        let updated = 0;
+        let skipped = 0;
+
+        newPosts.forEach((item) => {
+          const cleanTitle = (item.internalTitle || 'Sin Título').trim();
+          const cleanDate = (item.date || '').trim();
+
+          const existingIdx = currentPosts.findIndex(
+            (p) =>
+              p.brandId === targetBrandId &&
+              p.internalTitle?.toLowerCase().trim() === cleanTitle.toLowerCase() &&
+              p.date === cleanDate
+          );
+
+          if (existingIdx >= 0 && duplicateStrategy === 'skip') {
+            skipped++;
+            return;
+          }
+
+          if (existingIdx >= 0 && duplicateStrategy === 'update') {
+            currentPosts[existingIdx] = {
+              ...currentPosts[existingIdx],
+              ...item,
+              brandId: targetBrandId,
+              updatedAt: new Date().toISOString(),
+            } as Post;
+            updated++;
+            return;
+          }
+
+          const freshPost: Post = {
+            id: item.id || `post_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            brandId: targetBrandId,
+            campaignId: item.campaignId,
+            format: item.format || 'Static Post',
+            pillar: item.pillar || 'Marketing Digital',
+            internalTitle: cleanTitle,
+            hook: item.hook || '',
+            caption: item.caption || '',
+            cta: item.cta || '',
+            hashtags: Array.isArray(item.hashtags) ? item.hashtags : [],
+            platforms: (Array.isArray(item.platforms) && item.platforms.length > 0
+              ? item.platforms
+              : ['instagram']) as Platform[],
+            theme: item.theme || cleanTitle,
+            objective: item.objective || 'Contenido estratégico Pixel 12',
+            date: cleanDate || new Date().toISOString().split('T')[0],
+            time: item.time || '10:00',
+            status: item.status || 'DRAFT',
+            assigneeId: item.assigneeId,
+            assigneeName: item.assigneeName,
+            relatedTaskIds: item.relatedTaskIds || [],
+            approvalHistory: item.approvalHistory || [],
+            versions: item.versions || [],
+            sourceFromMatrix: true,
+            createdAt: item.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          currentPosts.unshift(freshPost);
+          imported++;
+        });
+
+        const updatedWorkspace: WorkspaceData = {
+          ...data,
+          posts: currentPosts,
+          auditLogs: [
+            {
+              id: 'log_' + Date.now(),
+              actorName: data.currentMember?.name || 'Administrador',
+              action: 'Importó publicaciones en lote',
+              entityType: 'post',
+              entityId: targetBrandId,
+              details: `Importó ${imported} publicaciones (${updated} actualizadas, ${skipped} omitidas) a la matriz.`,
+              timestamp: new Date().toISOString(),
+            },
+            ...(data.auditLogs || []),
+          ],
+        };
+
+        // 3. Persistir en Firestore y localStorage
+        await persistState(updatedWorkspace);
+        showToast(`Importación exitosa: ${imported} agregadas, ${updated} actualizadas.`);
+        return { importedCount: imported, updatedCount: updated, skippedCount: skipped };
+      } catch (err: any) {
+        showToast(err.message || 'Error durante la importación masiva', 'error');
+        throw err;
+      }
+    },
+    [data, persistState, showToast]
+  );
+
+  // Programar publicación al Calendario
+  const schedulePostToCalendar = useCallback(
+    async (postId: string, date?: string, time?: string) => {
+      const post = data.posts.find((p) => p.id === postId);
+      if (!post) {
+        showToast('Publicación no encontrada', 'error');
+        return;
+      }
+
+      const scheduledDate = date || post.date || new Date().toISOString().split('T')[0];
+      const scheduledTime = time || post.time || '10:00';
+
+      const updatedPost: Post = {
+        ...post,
+        date: scheduledDate,
+        time: scheduledTime,
+        status: 'SCHEDULED',
+        updatedAt: new Date().toISOString(),
       };
-      await persistState(updated);
-      showToast(`Se importaron ${newPosts.length} publicaciones correctamente`);
+
+      await updatePost(updatedPost);
+      showToast(`Publicación "${post.internalTitle}" programada en el Calendario para el ${scheduledDate}`);
+    },
+    [data.posts, updatePost, showToast]
+  );
+
+  // Programar publicaciones masivamente al Calendario
+  const scheduleAllPostsToCalendar = useCallback(
+    async (postIds?: string[]) => {
+      const targetPosts =
+        postIds && postIds.length > 0
+          ? data.posts.filter((p) => postIds.includes(p.id))
+          : data.posts.filter(
+              (p) =>
+                p.brandId === data.activeBrandId &&
+                p.status !== 'SCHEDULED' &&
+                p.status !== 'PUBLISHED'
+            );
+
+      if (targetPosts.length === 0) {
+        showToast('No hay publicaciones pendientes para agregar al calendario', 'info');
+        return { scheduledCount: 0 };
+      }
+
+      const updatedPosts = data.posts.map((p) => {
+        const isTarget = targetPosts.some((tp) => tp.id === p.id);
+        if (isTarget) {
+          return {
+            ...p,
+            status: 'SCHEDULED' as const,
+            date: p.date || new Date().toISOString().split('T')[0],
+            time: p.time || '10:00',
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return p;
+      });
+
+      const updatedWorkspace: WorkspaceData = {
+        ...data,
+        posts: updatedPosts,
+        auditLogs: [
+          {
+            id: 'log_' + Date.now(),
+            actorName: data.currentMember?.name || 'Administrador',
+            action: 'Programó publicaciones en lote al calendario',
+            entityType: 'content',
+            entityId: data.activeBrandId,
+            details: `Programó ${targetPosts.length} publicaciones de la matriz en el calendario oficial.`,
+            timestamp: new Date().toISOString(),
+          },
+          ...(data.auditLogs || []),
+        ],
+      };
+
+      await persistState(updatedWorkspace);
+      showToast(`${targetPosts.length} publicaciones agregadas al Calendario exitosamente`);
+      return { scheduledCount: targetPosts.length };
     },
     [data, persistState, showToast]
   );
@@ -1212,8 +1551,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updatedAt: now
       };
 
-      if (newQuote.items.length > 0) {
-        const subtotal = newQuote.items.reduce((sum, item) => sum + item.total, 0);
+      if (newQuote.items && newQuote.items.length > 0) {
+        const subtotal = newQuote.items.reduce((sum, item) => sum + (Number(item?.total) || 0), 0);
         const discountAmount = subtotal * ((newQuote.discountPercent || 0) / 100);
         const baseAfterDiscount = subtotal - discountAmount;
         const taxAmount = baseAfterDiscount * ((newQuote.taxPercent || 0) / 100);
@@ -1233,14 +1572,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           auditLogs: [
             {
               id: 'log_' + Date.now(),
-              actorName: data.currentMember.name,
+              actorName: data.currentMember?.name || 'Administrador',
               action: 'Creó cotización',
               entityType: 'post' as any,
               entityId: saved.id,
               details: `${saved.folio} - ${saved.client.company}`,
               timestamp: new Date().toISOString()
             },
-            ...data.auditLogs
+            ...(data.auditLogs || [])
           ]
         };
         await persistState(updatedWorkspace);
@@ -1261,7 +1600,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 
   const updateQuote = useCallback(
-    async (id: string, updates: Partial<QuoteProposal>): Promise<QuoteProposal> => {
+    async (idOrQuote: string | QuoteProposal, maybeUpdates?: Partial<QuoteProposal>): Promise<QuoteProposal> => {
+      const id = typeof idOrQuote === 'string' ? idOrQuote : idOrQuote.id;
+      const updates = typeof idOrQuote === 'string' ? (maybeUpdates || {}) : { ...idOrQuote, ...maybeUpdates };
       const existing = quotes.find((q) => q.id === id);
       if (!existing) throw new Error('Cotización no encontrada');
 
@@ -1693,16 +2034,38 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     async (id: string): Promise<void> => {
       try {
         await deleteCrmCompanyApi(id);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Backend delete company notice:', e);
+      }
+      const targetCompany = crmCompanies.find((c) => c.id === id);
       setCrmCompanies((prev) => prev.filter((c) => c.id !== id));
+      setCrmContacts((prev) => prev.filter((ct) => ct.companyId !== id));
+      setCrmDeals((prev) => prev.filter((d) => d.companyId !== id));
+      setCrmFollowUps((prev) => prev.filter((f) => f.targetId !== id));
+
       const updatedWorkspace: WorkspaceData = {
         ...data,
-        crmCompanies: crmCompanies.filter((c) => c.id !== id)
+        crmCompanies: crmCompanies.filter((c) => c.id !== id),
+        crmContacts: crmContacts.filter((ct) => ct.companyId !== id),
+        crmDeals: crmDeals.filter((d) => d.companyId !== id),
+        crmFollowUps: crmFollowUps.filter((f) => f.targetId !== id),
+        auditLogs: [
+          {
+            id: 'log_' + Date.now(),
+            actorName: data.currentMember?.name || 'Administrador',
+            action: 'Eliminó empresa del CRM',
+            entityType: 'crm',
+            entityId: id,
+            details: `Eliminó la empresa "${targetCompany?.name || id}" y limpió contactos y tratos asociados.`,
+            timestamp: new Date().toISOString(),
+          },
+          ...(data.auditLogs || []),
+        ],
       };
       await persistState(updatedWorkspace);
-      showToast('Empresa eliminada del CRM');
+      showToast('Empresa y registros asociados eliminados del CRM');
     },
-    [crmCompanies, data, persistState, showToast]
+    [crmCompanies, crmContacts, crmDeals, crmFollowUps, data, persistState, showToast]
   );
 
   const saveDeal = useCallback(
@@ -1760,13 +2123,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         type: 'STAGE_CHANGE',
         title: 'Movimiento de etapa en Pipeline',
         description: `Oportunidad actualizada a la etapa ${stageId}`,
-        authorName: data.currentMember.name || 'Usuario Pixel 12',
+        authorName: data.currentMember?.name || 'Usuario Pixel 12',
         timestamp: new Date().toISOString()
       };
       setCrmActivities((prev) => [activity, ...prev]);
       showToast('Etapa del deal actualizada');
     },
-    [data.currentMember.name, showToast]
+    [data.currentMember?.name, showToast]
   );
 
   const deleteDeal = useCallback(
@@ -1898,6 +2261,33 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     []
   );
 
+  const updateSocialAccount = useCallback(
+    async (account: SocialAccount): Promise<void> => {
+      const currentAccounts = data?.socialAccounts || [];
+      const updatedAccounts = currentAccounts.some((a) => a.id === account.id)
+        ? currentAccounts.map((a) => (a.id === account.id ? account : a))
+        : [...currentAccounts, account];
+
+      const updatedWorkspace: WorkspaceData = {
+        ...data,
+        socialAccounts: updatedAccounts,
+      };
+      await persistState(updatedWorkspace);
+    },
+    [data, persistState]
+  );
+
+  const updateGoogleAds = useCallback(
+    async (account: GoogleAdsAccount): Promise<void> => {
+      const updatedWorkspace: WorkspaceData = {
+        ...data,
+        googleAds: account,
+      };
+      await persistState(updatedWorkspace);
+    },
+    [data, persistState]
+  );
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -1931,6 +2321,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addBrand,
         updateBrand,
         deleteBrand,
+        deleteClient,
+        deactivateTeamMember,
+        reactivateTeamMember,
         updateSettings,
         isCreateWithAIOpen,
         openCreateWithAI: () => setIsCreateWithAIOpen(true),
@@ -1952,6 +2345,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addToast: showToast,
         dismissToast,
         bulkImportPosts,
+        schedulePostToCalendar,
+        scheduleAllPostsToCalendar,
         // Blog Exports
         blogPosts,
         selectedBlog,
@@ -2020,6 +2415,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         commercialAIInitialData,
         openCommercialAI,
         closeCommercialAI,
+        updateSocialAccount,
+        updateGoogleAds,
         reloadWorkspaceData,
       }}
     >

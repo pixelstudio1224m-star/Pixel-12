@@ -117,7 +117,7 @@ export const ContactDetailModal: React.FC<ContactDetailModalProps> = ({
       type: 'STAGE_CHANGE',
       title: 'Cambio de etapa de cliente',
       description: `Etapa actualizada a ${stageBadgeStyle[newStage].label}`,
-      authorName: data.currentMember.name,
+      authorName: data?.currentMember?.name || 'Pixel 12 Specialist',
       timestamp: new Date().toISOString()
     });
   };
@@ -134,7 +134,7 @@ export const ContactDetailModal: React.FC<ContactDetailModalProps> = ({
       type: 'NOTE',
       title: 'Nota comercial',
       description: newNote.trim(),
-      authorName: data.currentMember.name,
+      authorName: data?.currentMember?.name || 'Pixel 12 Specialist',
       timestamp: new Date().toISOString()
     };
 
@@ -158,7 +158,7 @@ export const ContactDetailModal: React.FC<ContactDetailModalProps> = ({
       dueDate: new Date(fuDueDate).toISOString(),
       priority: 'HIGH',
       status: 'PENDING',
-      assignedToName: data.currentMember.name,
+      assignedToName: data?.currentMember?.name || 'Pixel 12 Specialist',
       createdAt: new Date().toISOString()
     };
 
@@ -170,7 +170,7 @@ export const ContactDetailModal: React.FC<ContactDetailModalProps> = ({
       type: 'FOLLOW_UP',
       title: `Nuevo seguimiento programado: ${fuTitle}`,
       description: `Canal: ${fuType} • Fecha: ${new Date(fuDueDate).toLocaleString()}`,
-      authorName: data.currentMember.name,
+      authorName: data?.currentMember?.name || 'Pixel 12 Specialist',
       timestamp: new Date().toISOString()
     });
 

@@ -53,16 +53,18 @@ export const CrmKanbanBoard: React.FC<CrmKanbanBoardProps> = ({
   const [lostModalDealId, setLostModalDealId] = useState<string | null>(null);
   const [lostReasonInput, setLostReasonInput] = useState('');
 
-  const activePipeline =
-    crmPipelines.find((p) => p.id === activePipelineId) || crmPipelines[0] || {
-      id: 'default',
-      name: 'Pipeline General',
-      isDefault: true,
-      stages: []
-    };
+  const rawActivePipeline =
+    (crmPipelines || []).find((p) => p.id === activePipelineId) || (crmPipelines || [])[0];
 
-  const pipelineDeals = crmDeals.filter(
-    (d) => d.pipelineId === activePipeline.id || (!d.pipelineId && activePipeline.isDefault)
+  const activePipeline = {
+    id: rawActivePipeline?.id || 'default',
+    name: rawActivePipeline?.name || 'Pipeline General',
+    isDefault: rawActivePipeline?.isDefault ?? true,
+    stages: rawActivePipeline?.stages && Array.isArray(rawActivePipeline.stages) ? rawActivePipeline.stages : []
+  };
+
+  const pipelineDeals = (crmDeals || []).filter(
+    (d) => d && (d.pipelineId === activePipeline.id || (!d.pipelineId && activePipeline.isDefault))
   );
 
   // Financial calculations
@@ -71,11 +73,14 @@ export const CrmKanbanBoard: React.FC<CrmKanbanBoardProps> = ({
     (acc, d) => acc + ((d.value || 0) * (d.probability || 50)) / 100,
     0
   );
-  const wonDeals = pipelineDeals.filter((d) => d.stageId === 'WON');
+  const wonDeals = pipelineDeals.filter((d) => {
+    const stage = activePipeline?.stages?.find((s) => s.id === d.stageId);
+    return d.stageId === 'WON' || stage?.winState === 'WON';
+  });
   const wonValue = wonDeals.reduce((acc, d) => acc + (d.value || 0), 0);
 
   const handleMoveStage = async (deal: CrmDeal, targetStageId: string) => {
-    const targetStage = activePipeline.stages.find((s) => s.id === targetStageId);
+    const targetStage = activePipeline?.stages?.find((s) => s.id === targetStageId);
     await updateDealStage(deal.id, targetStageId, {
       probability: targetStage ? targetStage.probability : deal.probability
     });
@@ -83,7 +88,8 @@ export const CrmKanbanBoard: React.FC<CrmKanbanBoardProps> = ({
 
   const handleConfirmLost = async () => {
     if (!lostModalDealId) return;
-    await updateDealStage(lostModalDealId, 'LOST', {
+    const lostStage = activePipeline?.stages?.find((s) => s.winState === 'LOST') || { id: 'LOST' };
+    await updateDealStage(lostModalDealId, lostStage.id, {
       lostReason: lostReasonInput || 'No especificado',
       probability: 0
     });
@@ -110,9 +116,9 @@ export const CrmKanbanBoard: React.FC<CrmKanbanBoardProps> = ({
                 onChange={(e) => setActivePipelineId(e.target.value)}
                 className="bg-[#181826] border border-[#2A2A3E] rounded-xl px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-[#D4AF37]"
               >
-                {crmPipelines.map((pipe) => (
+                {(crmPipelines || []).map((pipe) => (
                   <option key={pipe.id} value={pipe.id}>
-                    {pipe.name} ({pipe.stages.length} etapas)
+                    {pipe.name} ({(pipe.stages || []).length} etapas)
                   </option>
                 ))}
               </select>
@@ -312,10 +318,11 @@ export const CrmKanbanBoard: React.FC<CrmKanbanBoardProps> = ({
                           <div className="pt-2 border-t border-[#202032] flex items-center justify-between gap-1">
                             {/* Move Left */}
                             <button
-                              disabled={stageIndex === 0}
-                              onClick={() =>
-                                handleMoveStage(deal, activePipeline.stages[stageIndex - 1].id)
-                              }
+                              disabled={stageIndex === 0 || !activePipeline?.stages?.[stageIndex - 1]}
+                              onClick={() => {
+                                const prevStage = activePipeline?.stages?.[stageIndex - 1];
+                                if (prevStage) handleMoveStage(deal, prevStage.id);
+                              }}
                               className="p-1 rounded text-zinc-500 hover:text-white disabled:opacity-20 transition-colors"
                               title="Mover a etapa previa"
                             >
@@ -366,10 +373,11 @@ export const CrmKanbanBoard: React.FC<CrmKanbanBoardProps> = ({
 
                             {/* Move Right */}
                             <button
-                              disabled={stageIndex === activePipeline.stages.length - 1}
-                              onClick={() =>
-                                handleMoveStage(deal, activePipeline.stages[stageIndex + 1].id)
-                              }
+                              disabled={!activePipeline?.stages || stageIndex >= activePipeline.stages.length - 1}
+                              onClick={() => {
+                                const nextStage = activePipeline?.stages?.[stageIndex + 1];
+                                if (nextStage) handleMoveStage(deal, nextStage.id);
+                              }}
                               className="p-1 rounded text-zinc-500 hover:text-white disabled:opacity-20 transition-colors"
                               title="Mover a siguiente etapa"
                             >

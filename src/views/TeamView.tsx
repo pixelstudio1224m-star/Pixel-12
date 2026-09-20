@@ -30,7 +30,7 @@ import {
 } from '../lib/api';
 
 export const TeamView: React.FC = () => {
-  const { data, showToast, reloadWorkspaceData } = useWorkspace();
+  const { data, showToast, reloadWorkspaceData, deactivateTeamMember, reactivateTeamMember } = useWorkspace();
   const { profile, canManageTeam } = useAuth();
 
   // Filter & Search
@@ -188,12 +188,11 @@ export const TeamView: React.FC = () => {
     if (!memberToDeactivate || !canManageTeam) return;
     setIsDeactivating(true);
     try {
-      await deactivateTeamMemberApi(memberToDeactivate.id);
+      await deactivateTeamMember(memberToDeactivate.id);
       await reloadWorkspaceData();
-      showToast(`Acceso revocado para ${memberToDeactivate.name}. Sus tareas e historial se conservan.`);
       setMemberToDeactivate(null);
     } catch (err: any) {
-      showToast(err?.message || 'Error al desactivar el miembro');
+      showToast(err?.message || 'Error al desactivar el miembro', 'error');
     } finally {
       setIsDeactivating(false);
     }
@@ -204,12 +203,11 @@ export const TeamView: React.FC = () => {
     if (!memberToReactivate || !canManageTeam) return;
     setIsReactivating(true);
     try {
-      await reactivateTeamMemberApi(memberToReactivate.id);
+      await reactivateTeamMember(memberToReactivate.id);
       await reloadWorkspaceData();
-      showToast(`Acceso restablecido para ${memberToReactivate.name}.`);
       setMemberToReactivate(null);
     } catch (err: any) {
-      showToast(err?.message || 'Error al reactivar el miembro');
+      showToast(err?.message || 'Error al reactivar el miembro', 'error');
     } finally {
       setIsReactivating(false);
     }

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { saveWorkspaceToFirestore } from '../lib/firebase';
+import { initialWorkspaceData } from '../lib/defaultData';
 import {
   Settings,
   Clock,
@@ -29,13 +30,20 @@ export const SettingsView: React.FC = () => {
   const { data, updateSettings, showToast } = useWorkspace();
   const { user, profile, role, logout } = useAuth();
 
-  const [timezone, setTimezone] = useState(data.workspaceSettings.timezone || 'America/Guayaquil');
-  const [agencyType, setAgencyType] = useState(data.workspaceSettings.agencyType || 'Agencia de Marketing Digital & Asistencia Virtual');
-  const [autoDelete, setAutoDelete] = useState(data.workspaceSettings.autoDeleteRejectedPosts);
+  const settings = data?.workspaceSettings || {
+    timezone: 'America/Guayaquil',
+    agencyType: 'Agencia de Marketing Digital & Asistencia Virtual',
+    autoDeleteRejectedPosts: false,
+    brandIdentity: {}
+  };
+
+  const [timezone, setTimezone] = useState(settings.timezone || 'America/Guayaquil');
+  const [agencyType, setAgencyType] = useState(settings.agencyType || 'Agencia de Marketing Digital & Asistencia Virtual');
+  const [autoDelete, setAutoDelete] = useState(settings.autoDeleteRejectedPosts ?? false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Brand Identity / Logo State
-  const currentLogo = data.workspaceSettings.brandIdentity?.officialLogoUrl || '';
+  const currentLogo = settings.brandIdentity?.officialLogoUrl || '';
   const [logoPreview, setLogoPreview] = useState<string>(currentLogo);
   const [logoUrlInput, setLogoUrlInput] = useState<string>(currentLogo);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +94,7 @@ export const SettingsView: React.FC = () => {
       agencyType,
       autoDeleteRejectedPosts: autoDelete,
       brandIdentity: {
-        ...data.workspaceSettings.brandIdentity,
+        ...(data?.workspaceSettings?.brandIdentity || {}),
         officialLogoUrl: logoPreview.trim() || undefined,
         updatedAt: new Date().toISOString(),
         updatedBy: profile?.displayName || user?.displayName || 'Admin',
@@ -111,12 +119,18 @@ export const SettingsView: React.FC = () => {
     }
   };
 
-  const handleResetData = () => {
+  const handleResetData = async () => {
     if (
       confirm(
         '¿Deseas restablecer todos los datos del workspace a los valores predeterminados de Pixel 12?'
       )
     ) {
+      try {
+        await fetch('/api/workspace/reset', { method: 'POST' });
+        await saveWorkspaceToFirestore(initialWorkspaceData);
+      } catch (e) {
+        console.warn('Reset sync notice:', e);
+      }
       localStorage.removeItem('pixel12_workspace_cache');
       window.location.reload();
     }

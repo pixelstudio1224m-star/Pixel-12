@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { useAuth } from '../context/AuthContext';
 import { Brand, ContentPillar } from '../types';
 import {
   Palette,
@@ -24,7 +25,8 @@ import {
   Smile,
   AlertOctagon,
   Copy,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from 'lucide-react';
 
 const PRESET_PILLARS: ContentPillar[] = [
@@ -57,53 +59,60 @@ const PRESET_BODY_FONTS = [
 ];
 
 export const BrandsView: React.FC = () => {
-  const { data, activeBrand, setActiveBrandId, updateBrand, addBrand, showToast } = useWorkspace();
+  const { data, activeBrand, setActiveBrandId, updateBrand, addBrand, deleteBrand, showToast } = useWorkspace();
+  const { role, canManageSettings } = useAuth();
+  const isAdmin = role === 'ADMIN' || canManageSettings;
 
   // Active subtab
   const [activeTab, setActiveTab] = useState<'general' | 'visual' | 'pillars' | 'voice' | 'preview'>('general');
 
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Form states initialized with activeBrand
-  const [name, setName] = useState(activeBrand.name);
-  const [tagline, setTagline] = useState(activeBrand.tagline || '');
-  const [industry, setIndustry] = useState(activeBrand.industry || '');
-  const [description, setDescription] = useState(activeBrand.description || '');
-  const [targetAudience, setTargetAudience] = useState(activeBrand.targetAudience || '');
-  const [services, setServices] = useState<string[]>(activeBrand.services || []);
+  const [name, setName] = useState(activeBrand?.name || '');
+  const [tagline, setTagline] = useState(activeBrand?.tagline || '');
+  const [industry, setIndustry] = useState(activeBrand?.industry || '');
+  const [description, setDescription] = useState(activeBrand?.description || '');
+  const [targetAudience, setTargetAudience] = useState(activeBrand?.targetAudience || '');
+  const [services, setServices] = useState<string[]>(activeBrand?.services || []);
   const [newServiceInput, setNewServiceInput] = useState('');
 
   // Visual & Logo states
-  const [logoUrl, setLogoUrl] = useState(activeBrand.logoUrl || '');
-  const [logoDarkUrl, setLogoDarkUrl] = useState(activeBrand.logoDarkUrl || '');
-  const [logoLightUrl, setLogoLightUrl] = useState(activeBrand.logoLightUrl || '');
-  const [faviconUrl, setFaviconUrl] = useState(activeBrand.faviconUrl || '');
-  const [displayFont, setDisplayFont] = useState(activeBrand.typography?.display || 'Outfit');
-  const [bodyFont, setBodyFont] = useState(activeBrand.typography?.body || 'Plus Jakarta Sans');
+  const [logoUrl, setLogoUrl] = useState(activeBrand?.logoUrl || '');
+  const [logoDarkUrl, setLogoDarkUrl] = useState(activeBrand?.logoDarkUrl || '');
+  const [logoLightUrl, setLogoLightUrl] = useState(activeBrand?.logoLightUrl || '');
+  const [faviconUrl, setFaviconUrl] = useState(activeBrand?.faviconUrl || '');
+  const [displayFont, setDisplayFont] = useState(activeBrand?.typography?.display || 'Outfit');
+  const [bodyFont, setBodyFont] = useState(activeBrand?.typography?.body || 'Plus Jakarta Sans');
 
   // Colors
-  const [primaryColor, setPrimaryColor] = useState(activeBrand.colors?.primary || '#D4AF37');
-  const [secondaryColor, setSecondaryColor] = useState(activeBrand.colors?.secondary || '#CBD5E1');
-  const [accentColor, setAccentColor] = useState(activeBrand.colors?.accent || '#D4AF37');
-  const [goldColor, setGoldColor] = useState(activeBrand.colors?.gold || '#D4AF37');
-  const [silverColor, setSilverColor] = useState(activeBrand.colors?.silver || '#CBD5E1');
-  const [backgroundColor, setBackgroundColor] = useState(activeBrand.colors?.background || '#09090B');
-  const [textColor, setTextColor] = useState(activeBrand.colors?.text || '#FFFFFF');
+  const [primaryColor, setPrimaryColor] = useState(activeBrand?.colors?.primary || '#D4AF37');
+  const [secondaryColor, setSecondaryColor] = useState(activeBrand?.colors?.secondary || '#CBD5E1');
+  const [accentColor, setAccentColor] = useState(activeBrand?.colors?.accent || '#D4AF37');
+  const [goldColor, setGoldColor] = useState(activeBrand?.colors?.gold || '#D4AF37');
+  const [silverColor, setSilverColor] = useState(activeBrand?.colors?.silver || '#CBD5E1');
+  const [backgroundColor, setBackgroundColor] = useState(activeBrand?.colors?.background || '#09090B');
+  const [textColor, setTextColor] = useState(activeBrand?.colors?.text || '#FFFFFF');
 
   // Pillars
-  const [pillars, setPillars] = useState<ContentPillar[]>(activeBrand.pillars || []);
+  const [pillars, setPillars] = useState<ContentPillar[]>(activeBrand?.pillars || []);
   const [newPillarInput, setNewPillarInput] = useState('');
 
   // Voice & Copilot
-  const [tone, setTone] = useState(activeBrand.voice?.tone || '');
-  const [personality, setPersonality] = useState<string[]>(activeBrand.voice?.personality || []);
+  const [tone, setTone] = useState(activeBrand?.voice?.tone || '');
+  const [personality, setPersonality] = useState<string[]>(activeBrand?.voice?.personality || []);
   const [newPersonalityInput, setNewPersonalityInput] = useState('');
-  const [powerWords, setPowerWords] = useState<string[]>(activeBrand.voice?.powerWords || []);
+  const [powerWords, setPowerWords] = useState<string[]>(activeBrand?.voice?.powerWords || []);
   const [newPowerWordInput, setNewPowerWordInput] = useState('');
-  const [forbiddenWords, setForbiddenWords] = useState<string[]>(activeBrand.voice?.forbiddenWords || []);
+  const [forbiddenWords, setForbiddenWords] = useState<string[]>(activeBrand?.voice?.forbiddenWords || []);
   const [newForbiddenWordInput, setNewForbiddenWordInput] = useState('');
-  const [emojisAllowed, setEmojisAllowed] = useState<boolean>(activeBrand.voice?.emojisAllowed ?? true);
-  const [preferredCTAs, setPreferredCTAs] = useState<string[]>(activeBrand.voice?.preferredCTAs || []);
+  const [emojisAllowed, setEmojisAllowed] = useState<boolean>(activeBrand?.voice?.emojisAllowed ?? true);
+  const [preferredCTAs, setPreferredCTAs] = useState<string[]>(activeBrand?.voice?.preferredCTAs || []);
   const [newCTAInput, setNewCTAInput] = useState('');
-  const [styleGuidelines, setStyleGuidelines] = useState(activeBrand.voice?.styleGuidelines || '');
+  const [styleGuidelines, setStyleGuidelines] = useState(activeBrand?.voice?.styleGuidelines || '');
 
   // Modal for new brand
   const [isNewBrandModalOpen, setIsNewBrandModalOpen] = useState(false);
@@ -113,7 +122,8 @@ export const BrandsView: React.FC = () => {
 
   // Sync state when activeBrand changes
   useEffect(() => {
-    setName(activeBrand.name);
+    if (!activeBrand) return;
+    setName(activeBrand.name || '');
     setTagline(activeBrand.tagline || '');
     setIndustry(activeBrand.industry || '');
     setDescription(activeBrand.description || '');
@@ -317,6 +327,34 @@ export const BrandsView: React.FC = () => {
     showToast(`Nueva marca "${newB.name}" creada e incorporada al Workspace`);
   };
 
+  // Delete client handler with cascading warning and confirmation
+  const handleDeleteClient = async () => {
+    if (activeBrand.id === 'brand_pixel12') {
+      showToast('La marca principal Pixel 12 OS no puede ser eliminada', 'error');
+      return;
+    }
+    if (deleteConfirmName.trim().toLowerCase() !== activeBrand.name.trim().toLowerCase()) {
+      showToast('El nombre escrito no coincide exactamente con el del cliente', 'error');
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const clientName = activeBrand.name;
+      await deleteBrand(activeBrand.id);
+      setIsDeleteModalOpen(false);
+      setDeleteConfirmName('');
+      const fallback = data.brands.find((b) => b.id !== activeBrand.id) || data.brands[0];
+      if (fallback) {
+        setActiveBrandId(fallback.id);
+      }
+      showToast(`Cliente "${clientName}" y todos sus contenidos eliminados permanentemente`, 'success');
+    } catch (err: any) {
+      showToast('Error al eliminar cliente: ' + (err?.message || 'Error desconocido'), 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div id="brands-view" className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header & Brand Switcher */}
@@ -383,6 +421,20 @@ export const BrandsView: React.FC = () => {
             <Plus className="w-3.5 h-3.5" />
             <span>Nueva Marca</span>
           </button>
+
+          {isAdmin && activeBrand.id !== 'brand_pixel12' && (
+            <button
+              onClick={() => {
+                setDeleteConfirmName('');
+                setIsDeleteModalOpen(true);
+              }}
+              className="px-3 py-2 rounded-xl bg-red-950/30 hover:bg-red-900/50 text-rose-300 border border-red-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              title={`Eliminar cliente ${activeBrand.name} y todos sus contenidos`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>Eliminar Cliente</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -533,6 +585,36 @@ export const BrandsView: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* DANGER ZONE: ELIMINAR CLIENTE / MARCA */}
+              {isAdmin && activeBrand.id !== 'brand_pixel12' && (
+                <div className="mt-8 pt-6 border-t border-red-900/40 bg-red-950/15 p-5 rounded-2xl border border-red-500/20 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-red-300 uppercase tracking-wide">
+                        Zona de Peligro — Eliminar Cliente
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        Esta acción es definitiva. Al eliminar a <strong>{activeBrand.name}</strong>, el sistema removerá la marca de la base de datos, del listado y de todos los selectores. Se limpiarán en cascada todas las publicaciones vinculadas (evitando publicaciones huérfanas en el calendario), campañas, tareas y registros de CRM.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteConfirmName('');
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-red-600/90 hover:bg-red-600 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-red-950/50 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Eliminar este Cliente Definitivamente</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1230,19 +1312,19 @@ export const BrandsView: React.FC = () => {
             <div className="space-y-2 pt-2 border-t border-[#1F1F30] text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Pilares editoriales:</span>
-                <span className="font-bold text-[#E5C158]">{pillars.length} activos</span>
+                <span className="font-bold text-[#E5C158]">{(pillars || []).length} activos</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Servicios clave:</span>
-                <span className="font-bold text-zinc-200">{services.length}</span>
+                <span className="font-bold text-zinc-200">{(services || []).length}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">Palabras clave de poder:</span>
-                <span className="font-bold text-emerald-400">{powerWords.length}</span>
+                <span className="font-bold text-emerald-400">{(powerWords || []).length}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-zinc-400">CTAs registrados:</span>
-                <span className="font-bold text-zinc-200">{preferredCTAs.length}</span>
+                <span className="font-bold text-zinc-200">{(preferredCTAs || []).length}</span>
               </div>
             </div>
 
@@ -1341,6 +1423,83 @@ export const BrandsView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmación de Eliminación Definitiva de Cliente */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+          <div className="bg-[#101018] border border-red-500/40 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5">
+            <div className="flex items-start gap-3 border-b border-[#222234] pb-4">
+              <div className="w-10 h-10 rounded-2xl bg-red-950/60 border border-red-500/50 flex items-center justify-center text-red-400 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">¿Eliminar este cliente definitivamente?</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Estás a punto de eliminar a <strong className="text-white font-bold">{activeBrand.name}</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs text-zinc-300 bg-[#161622] p-4 rounded-2xl border border-[#242436]">
+              <p className="font-semibold text-red-300">
+                ⚠️ Esta acción es irreversible y ejecutará las siguientes operaciones en cascada:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-zinc-400">
+                <li>Eliminará el cliente de la base de datos y de la lista de marcas.</li>
+                <li>Eliminará al cliente de todos los selectores y filtros del sistema.</li>
+                <li>Limpiará en cascada todas las publicaciones del cliente para <strong>no dejar publicaciones huérfanas en el calendario</strong>.</li>
+                <li>Eliminará campañas, tareas vinculadas y registros de CRM de esta cuenta.</li>
+                <li>La eliminación persistirá inmediatamente en Firestore y backend.</li>
+              </ul>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                Para confirmar, escribe exactamente el nombre del cliente: <span className="text-amber-400 font-bold">{activeBrand.name}</span>
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={`Escribe "${activeBrand.name}" para confirmar`}
+                className="w-full text-xs p-3 rounded-xl bg-[#141420] border border-red-500/30 text-white focus:outline-none focus:border-red-400"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#222234]">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeleteConfirmName('');
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteClient}
+                disabled={isDeleting || deleteConfirmName.trim().toLowerCase() !== activeBrand.name.trim().toLowerCase()}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-lg shadow-red-950/60 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Eliminando cliente...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Eliminar Cliente Definitivamente</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

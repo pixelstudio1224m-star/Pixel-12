@@ -9,6 +9,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import {
+  initializeFirestore,
   getFirestore,
   doc,
   getDoc,
@@ -23,8 +24,16 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
-// CRITICAL: Initialize Firestore with explicit databaseId from config
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// CRITICAL: Initialize Firestore with explicit databaseId and forced long polling.
+// In iframe sandboxes and proxy environments, WebChannel HTTP/2 streaming buffers,
+// causing a 10s timeout warning. experimentalForceLongPolling connects immediately.
+export const db = initializeFirestore(
+  app,
+  {
+    experimentalForceLongPolling: true,
+  },
+  firebaseConfig.firestoreDatabaseId
+);
 
 // Auth instance
 export const auth = getAuth(app);

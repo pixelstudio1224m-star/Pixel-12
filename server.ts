@@ -126,9 +126,8 @@ async function generateGeminiContent(params: {
     throw new Error('GEMINI_API_KEY no configurada');
   }
 
-  // Candidate models: gemini-3.1-flash-lite is highly available and fast,
-  // gemini-2.5-flash / gemini-flash-latest provide stable backups, and gemini-3.8-flash is also available.
-  const baseModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash'];
+  // Candidate models: official supported Gemini SDK models
+  const baseModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.1-pro-preview'];
   const now = Date.now();
 
   // Sort so models that didn't experience recent quota/503/429 spikes are tried first
@@ -598,6 +597,11 @@ app.post('/api/team/resend-invite', async (req, res) => {
 app.post('/api/team/deactivate', (req, res) => {
   try {
     const { memberId } = req.body;
+    const callerRole = (req.headers['x-user-role'] as string) || '';
+    if (callerRole.toUpperCase() === 'CLIENT') {
+      return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden gestionar miembros del equipo.' });
+    }
+
     if (!memberId) {
       return res.status(400).json({ error: 'memberId es requerido.' });
     }
@@ -626,12 +630,25 @@ app.post('/api/team/deactivate', (req, res) => {
       });
     }
 
+    // Registrar en auditoría
+    if (!data.auditLogs) data.auditLogs = [];
+    data.auditLogs.unshift({
+      id: 'log_' + Date.now(),
+      actorName: 'Administrador Pixel 12',
+      action: 'Dio de baja a miembro del equipo',
+      entityType: 'team',
+      entityId: memberId,
+      details: `Desactivó el acceso para ${member.name} (${member.email}). Tareas e historial conservados.`,
+      timestamp: new Date().toISOString()
+    });
+
     writeWorkspaceData(data);
 
     res.json({
       success: true,
       message: `El acceso para ${member.name} (${member.email}) ha sido desactivado. Sus registros y tareas se mantienen íntegros.`,
-      member
+      member,
+      members: data.members
     });
   } catch (err: any) {
     console.error('Error in /api/team/deactivate:', err);
@@ -643,6 +660,11 @@ app.post('/api/team/deactivate', (req, res) => {
 app.post('/api/team/reactivate', (req, res) => {
   try {
     const { memberId } = req.body;
+    const callerRole = (req.headers['x-user-role'] as string) || '';
+    if (callerRole.toUpperCase() === 'CLIENT') {
+      return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden gestionar miembros del equipo.' });
+    }
+
     if (!memberId) {
       return res.status(400).json({ error: 'memberId es requerido.' });
     }
@@ -658,12 +680,25 @@ app.post('/api/team/reactivate', (req, res) => {
     member.status = 'active';
     delete member.deactivatedAt;
 
+    // Registrar en auditoría
+    if (!data.auditLogs) data.auditLogs = [];
+    data.auditLogs.unshift({
+      id: 'log_' + Date.now(),
+      actorName: 'Administrador Pixel 12',
+      action: 'Reactivó a miembro del equipo',
+      entityType: 'team',
+      entityId: memberId,
+      details: `Restableció el acceso para ${member.name} (${member.email}).`,
+      timestamp: new Date().toISOString()
+    });
+
     writeWorkspaceData(data);
 
     res.json({
       success: true,
       message: `El acceso para ${member.name} ha sido reactivado.`,
-      member
+      member,
+      members: data.members
     });
   } catch (err: any) {
     console.error('Error in /api/team/reactivate:', err);
@@ -821,6 +856,235 @@ app.post('/api/auth/check-access', (req, res) => {
     res.json({ allowed: true, status: member?.status || 'active' });
   } catch (err: any) {
     res.json({ allowed: true });
+  }
+});
+
+// ---------------- CLIENTES & MARCAS API (PIXEL 12 OS) ----------------
+// Eliminar cliente / marca con limpieza en cascada para evitar registros huérfanos
+const handleClientDeletion = (req: any, res: any) => {
+  try {
+    const clientId = req.params.id || req.body.clientId || req.body.id;
+    const callerRole = (req.headers['x-user-role'] as string) || '';
+
+    if (callerRole.toUpperCase() === 'CLIENT') {
+      return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden eliminar clientes.' });
+    }
+
+    if (!clientId) {
+      return res.status(400).json({ error: 'ID de cliente no proporcionado.' });
+    }
+
+    if (clientId === 'brand_pixel12') {
+      return res.status(400).json({
+        error: 'No se puede eliminar la marca principal de Pixel 12 Studio. Esta marca es requerida para el funcionamiento del sistema.'
+      });
+    }
+
+    const data = readWorkspaceData();
+    if (!data.brands || !Array.isArray(data.brands)) {
+      return res.status(404).json({ error: 'No hay clientes registrados en el sistema.' });
+    }
+
+    const brandIndex = data.brands.findIndex((b: any) => b.id === clientId);
+    if (brandIndex === -1) {
+      return res.status(404).json({ error: `Cliente con ID "${clientId}" no encontrado.` });
+    }
+
+    const brandToDelete = data.brands[brandIndex];
+
+    if (data.brands.length <= 1) {
+      return res.status(400).json({
+        error: 'No es posible eliminar el único cliente existente. Debe haber al menos una marca en el espacio de trabajo.'
+      });
+    }
+
+    // 1. Eliminar la marca del catálogo de marcas
+    data.brands.splice(brandIndex, 1);
+
+    // 2. Si la marca activa era la eliminada, reasignar a Pixel 12 o a la primera restante
+    let newActiveBrandId = data.activeBrandId;
+    if (data.activeBrandId === clientId) {
+      const fallback = data.brands.find((b: any) => b.id === 'brand_pixel12') || data.brands[0];
+      data.activeBrandId = fallback ? fallback.id : '';
+      newActiveBrandId = data.activeBrandId;
+    }
+
+    // 3. Cascada: Eliminar publicaciones asociadas al cliente
+    const initialPostsCount = (data.posts || []).length;
+    data.posts = (data.posts || []).filter((p: any) => p.brandId !== clientId);
+    const removedPostsCount = initialPostsCount - data.posts.length;
+
+    // 4. Cascada: Eliminar campañas asociadas al cliente
+    const initialCampaignsCount = (data.campaigns || []).length;
+    data.campaigns = (data.campaigns || []).filter((c: any) => c.brandId !== clientId);
+    const removedCampaignsCount = initialCampaignsCount - data.campaigns.length;
+
+    // 5. Cascada: Eliminar tareas asociadas a este cliente
+    data.tasks = (data.tasks || []).filter((t: any) => t.brandId !== clientId);
+
+    // 6. Cascada en CRM: Limpiar empresas, contactos y tratos vinculados al nombre o ID del cliente
+    const clientNameLower = (brandToDelete.name || '').toLowerCase().trim();
+    
+    // Identificar IDs de empresas CRM vinculadas
+    const linkedCompanyIds = (data.crmCompanies || [])
+      .filter((comp: any) => (comp.name && comp.name.toLowerCase().trim() === clientNameLower) || comp.brandId === clientId)
+      .map((c: any) => c.id);
+
+    // Identificar contactos vinculados a esas empresas
+    const linkedContactIds = (data.crmContacts || [])
+      .filter((c: any) => linkedCompanyIds.includes(c.companyId))
+      .map((c: any) => c.id);
+
+    // Eliminar tratos vinculados a las empresas o contactos eliminados
+    if (data.crmDeals) {
+      data.crmDeals = data.crmDeals.filter((d: any) => 
+        !linkedCompanyIds.includes(d.companyId) && !linkedContactIds.includes(d.contactId)
+      );
+    }
+
+    // Eliminar seguimientos y actividades vinculadas
+    if (data.crmFollowUps) {
+      data.crmFollowUps = data.crmFollowUps.filter((f: any) => !linkedContactIds.includes(f.contactId));
+    }
+    if (data.crmActivities) {
+      data.crmActivities = data.crmActivities.filter((a: any) => 
+        !linkedContactIds.includes(a.contactId) && !linkedCompanyIds.includes(a.companyId)
+      );
+    }
+
+    // Eliminar contactos y empresas vinculadas
+    if (data.crmContacts) {
+      data.crmContacts = data.crmContacts.filter((c: any) => !linkedCompanyIds.includes(c.companyId));
+    }
+    if (data.crmCompanies) {
+      data.crmCompanies = data.crmCompanies.filter((comp: any) => !linkedCompanyIds.includes(comp.id));
+    }
+
+    // 7. Registro de auditoría obligatorio
+    if (!data.auditLogs) data.auditLogs = [];
+    data.auditLogs.unshift({
+      id: 'log_' + Date.now(),
+      actorName: 'Administrador Pixel 12',
+      action: 'Eliminó cliente y registros asociados',
+      entityType: 'client',
+      entityId: clientId,
+      details: `Se eliminó permanentemente el cliente "${brandToDelete.name}". Se limpiaron ${removedPostsCount} posts y ${removedCampaignsCount} campañas vinculadas.`,
+      timestamp: new Date().toISOString()
+    });
+
+    // 8. Persistir en backend
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      message: `El cliente "${brandToDelete.name}" y todos sus registros vinculados fueron eliminados correctamente.`,
+      deletedId: clientId,
+      newActiveBrandId,
+      remainingBrands: data.brands,
+      stats: {
+        removedPosts: removedPostsCount,
+        removedCampaigns: removedCampaignsCount
+      }
+    });
+  } catch (err: any) {
+    console.error('Error in handleClientDeletion:', err);
+    res.status(500).json({ error: 'Error al eliminar cliente: ' + err.message });
+  }
+};
+
+app.delete('/api/clients/:id', handleClientDeletion);
+app.post('/api/clients/delete', handleClientDeletion);
+
+// ---------------- PUBLICACIONES EN LOTE / MATRIZ API ----------------
+app.post('/api/posts/bulk', (req, res) => {
+  try {
+    const { posts, defaultBrandId, duplicateStrategy } = req.body;
+    if (!posts || !Array.isArray(posts) || posts.length === 0) {
+      return res.status(400).json({ error: 'Lista de publicaciones no proporcionada o vacía.' });
+    }
+
+    const data = readWorkspaceData();
+    if (!data.posts) data.posts = [];
+
+    let importedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    const strategy = duplicateStrategy || 'skip'; // 'skip' | 'update' | 'create'
+
+    posts.forEach((item: any) => {
+      const targetBrandId = item.brandId || defaultBrandId || data.activeBrandId || 'brand_pixel12';
+      const cleanTitle = (item.internalTitle || item.title || 'Sin Título').trim();
+      const cleanDate = (item.date || '').trim();
+
+      // Buscar duplicado por Brand + Título + Fecha
+      const existingIdx = data.posts.findIndex((p: any) =>
+        p.brandId === targetBrandId &&
+        p.internalTitle?.toLowerCase().trim() === cleanTitle.toLowerCase() &&
+        p.date === cleanDate
+      );
+
+      if (existingIdx >= 0 && strategy === 'skip') {
+        skippedCount++;
+        return;
+      }
+
+      if (existingIdx >= 0 && strategy === 'update') {
+        data.posts[existingIdx] = {
+          ...data.posts[existingIdx],
+          format: item.format || data.posts[existingIdx].format,
+          pillar: item.pillar || data.posts[existingIdx].pillar,
+          hook: item.hook || data.posts[existingIdx].hook,
+          caption: item.caption || data.posts[existingIdx].caption,
+          cta: item.cta || data.posts[existingIdx].cta,
+          time: item.time || data.posts[existingIdx].time,
+          channels: item.channels || data.posts[existingIdx].channels,
+          status: item.status || data.posts[existingIdx].status,
+          updatedAt: new Date().toISOString()
+        };
+        updatedCount++;
+        return;
+      }
+
+      // Crear nuevo post
+      const newPost = {
+        id: item.id || `post_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        brandId: targetBrandId,
+        campaignId: item.campaignId || undefined,
+        format: item.format || 'Static Post',
+        pillar: item.pillar || 'Marketing Digital',
+        internalTitle: cleanTitle,
+        hook: item.hook || '',
+        caption: item.caption || '',
+        cta: item.cta || '',
+        hashtags: Array.isArray(item.hashtags) ? item.hashtags : (item.hashtags ? String(item.hashtags).split(' ').filter(Boolean) : []),
+        channels: Array.isArray(item.channels) && item.channels.length > 0 ? item.channels : ['instagram'],
+        date: cleanDate || new Date().toISOString().split('T')[0],
+        time: item.time || '10:00',
+        status: item.status || 'DRAFT',
+        assigneeId: item.assigneeId || undefined,
+        assigneeName: item.assigneeName || undefined,
+        assets: item.assets || [],
+        createdAt: item.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      data.posts.unshift(newPost);
+      importedCount++;
+    });
+
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      importedCount,
+      updatedCount,
+      skippedCount,
+      totalWorkspacePosts: data.posts.length
+    });
+  } catch (err: any) {
+    console.error('Error in /api/posts/bulk:', err);
+    res.status(500).json({ error: 'Error importando publicaciones en lote: ' + err.message });
   }
 });
 

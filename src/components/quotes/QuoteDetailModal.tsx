@@ -62,7 +62,7 @@ Total Inversión: $${quote.total} ${quote.currency}
 Validez: Hasta el ${quote.validUntil}
 
 *Servicios Incluidos:*
-${quote.items.map((i) => `• ${i.name} ($${i.total})`).join('\n')}
+${(quote.items || []).map((i) => `• ${i.name} ($${i.total})`).join('\n')}
 
 *Condiciones de Pago:*
 ${quote.paymentTerms}
@@ -91,7 +91,7 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
   };
 
   const handleItemChange = (index: number, field: keyof QuoteItem, val: any) => {
-    const newItems = [...editedQuote.items];
+    const newItems = [...(editedQuote.items || [])];
     const currentItem = { ...newItems[index], [field]: val };
 
     if (field === 'quantity' || field === 'unitPrice') {
@@ -474,7 +474,7 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/60 print:divide-zinc-200">
-                      {quote.items.map((item, idx) => (
+                      {(quote.items || []).map((item, idx) => (
                         <tr key={idx} className="hover:bg-zinc-900/30">
                           <td className="p-3">
                             <div className="font-bold text-white print:text-black flex items-center gap-2">
@@ -843,7 +843,7 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                 </div>
 
                 <div className="space-y-3">
-                  {editedQuote.items.map((item, idx) => (
+                  {(editedQuote.items || []).map((item, idx) => (
                     <div
                       key={item.id || idx}
                       className="p-3 bg-zinc-900 rounded-xl border border-zinc-800 space-y-2 relative"

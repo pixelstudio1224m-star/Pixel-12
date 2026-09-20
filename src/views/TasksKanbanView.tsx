@@ -32,12 +32,14 @@ export const TasksKanbanView: React.FC = () => {
   const [newDeadlineTime, setNewDeadlineTime] = useState('17:00');
 
   const filteredTasks = useMemo(() => {
-    return data.tasks.filter((t) => {
+    const tasks = data?.tasks || [];
+    return tasks.filter((t) => {
+      if (!t) return false;
       if (memberFilter !== 'ALL' && t.assigneeId !== memberFilter) return false;
       if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
       return true;
     });
-  }, [data.tasks, memberFilter, priorityFilter]);
+  }, [data?.tasks, memberFilter, priorityFilter]);
 
   const columns: Array<{ id: TaskStatus; label: string; color: string; border: string }> = [
     { id: 'TODO', label: 'Por hacer (TODO)', color: 'bg-slate-100 text-slate-700', border: 'border-slate-200' },
@@ -105,7 +107,7 @@ export const TasksKanbanView: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-900">Tablero Kanban del Equipo</h3>
             <p className="text-xs text-slate-500 truncate">
-              {filteredTasks.length} tareas vinculadas a {activeBrand.name}
+              {filteredTasks.length} tareas vinculadas a {activeBrand?.name || 'la Marca'}
             </p>
           </div>
         </div>

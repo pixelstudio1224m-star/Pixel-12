@@ -773,10 +773,13 @@ export async function resendTeamInvitationApi(payload: {
   return data;
 }
 
-export async function deactivateTeamMemberApi(memberId: string): Promise<{ success: boolean; message: string }> {
+export async function deactivateTeamMemberApi(memberId: string, callerRole?: string): Promise<{ success: boolean; message: string; member?: any; members?: any[] }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (callerRole) headers['x-user-role'] = callerRole;
+
   const res = await fetch('/api/team/deactivate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ memberId })
   });
   const data = await res.json();
@@ -786,15 +789,63 @@ export async function deactivateTeamMemberApi(memberId: string): Promise<{ succe
   return data;
 }
 
-export async function reactivateTeamMemberApi(memberId: string): Promise<{ success: boolean; message: string }> {
+export async function reactivateTeamMemberApi(memberId: string, callerRole?: string): Promise<{ success: boolean; message: string; member?: any; members?: any[] }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (callerRole) headers['x-user-role'] = callerRole;
+
   const res = await fetch('/api/team/reactivate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ memberId })
   });
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || 'Error al reactivar el miembro');
+  }
+  return data;
+}
+
+export async function deleteClientApi(clientId: string, callerRole?: string): Promise<{
+  success: boolean;
+  message: string;
+  deletedId: string;
+  newActiveBrandId: string;
+  remainingBrands: any[];
+  stats?: { removedPosts: number; removedCampaigns: number };
+}> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (callerRole) headers['x-user-role'] = callerRole;
+
+  const res = await fetch(`/api/clients/${encodeURIComponent(clientId)}`, {
+    method: 'DELETE',
+    headers
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al eliminar cliente');
+  }
+  return data;
+}
+
+export async function bulkImportPostsApi(payload: {
+  posts: any[];
+  defaultBrandId?: string;
+  duplicateStrategy?: 'skip' | 'update' | 'create';
+}): Promise<{
+  success: boolean;
+  importedCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  totalWorkspacePosts: number;
+}> {
+  const res = await fetch('/api/posts/bulk', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error en la importación masiva de publicaciones');
   }
   return data;
 }

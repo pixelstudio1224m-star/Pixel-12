@@ -32,9 +32,10 @@ export const ApprovalsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const pendingPosts = data.posts.filter((p) => p.status === 'IN_REVIEW' || p.status === 'DRAFT');
-  const approvedPosts = data.posts.filter((p) => p.status === 'APPROVED' || p.status === 'SCHEDULED' || p.status === 'PUBLISHED');
-  const rejectedPosts = data.posts.filter((p) => p.status === 'REJECTED' || p.status === 'CHANGES_REQUESTED');
+  const posts = data?.posts || [];
+  const pendingPosts = posts.filter((p) => p && (p.status === 'IN_REVIEW' || p.status === 'DRAFT'));
+  const approvedPosts = posts.filter((p) => p && (p.status === 'APPROVED' || p.status === 'SCHEDULED' || p.status === 'PUBLISHED'));
+  const rejectedPosts = posts.filter((p) => p && (p.status === 'REJECTED' || p.status === 'CHANGES_REQUESTED'));
 
   const currentList =
     activeTab === 'pending'
@@ -120,14 +121,14 @@ export const ApprovalsView: React.FC = () => {
               Auto-borrado al no aprobar
             </span>
             <span className="text-[11px] text-slate-400">
-              {data.workspaceSettings.autoDeleteRejectedPosts ? 'Activo: Se borran de inmediato' : 'Desactivado'}
+              {data?.workspaceSettings?.autoDeleteRejectedPosts ? 'Activo: Se borran de inmediato' : 'Desactivado'}
             </span>
           </div>
 
           <label className="relative inline-flex items-center cursor-pointer ml-2">
             <input
               type="checkbox"
-              checked={data.workspaceSettings.autoDeleteRejectedPosts}
+              checked={!!data?.workspaceSettings?.autoDeleteRejectedPosts}
               onChange={(e) => {
                 updateSettings({ autoDeleteRejectedPosts: e.target.checked });
                 showToast(

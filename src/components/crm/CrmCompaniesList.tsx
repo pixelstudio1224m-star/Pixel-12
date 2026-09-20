@@ -11,17 +11,24 @@ import {
   Edit3,
   X,
   CheckCircle2,
-  Search
+  Search,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAuth } from '../../context/AuthContext';
 import { CrmCompany } from '../../types';
 
 export const CrmCompaniesList: React.FC = () => {
   const { crmCompanies, crmContacts, crmDeals, saveCompany, deleteCompany } = useWorkspace();
+  const { role, canManageSettings } = useAuth();
+  const isAdmin = role === 'ADMIN' || canManageSettings;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<CrmCompany | null>(null);
+  const [companyToDelete, setCompanyToDelete] = useState<CrmCompany | null>(null);
+  const [isDeletingCompany, setIsDeletingCompany] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -77,10 +84,15 @@ export const CrmCompaniesList: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const filteredCompanies = crmCompanies.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.industry && c.industry.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredCompanies = (crmCompanies || []).filter((c) => {
+    if (!c) return false;
+    const nameStr = c.name || '';
+    const indStr = c.industry || '';
+    return (
+      nameStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      indStr.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-4">
@@ -108,8 +120,8 @@ export const CrmCompaniesList: React.FC = () => {
       {/* Grid of Companies */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredCompanies.map((comp) => {
-          const associatedContacts = crmContacts.filter((c) => c.companyId === comp.id);
-          const associatedDeals = crmDeals.filter((d) => d.companyId === comp.id);
+          const associatedContacts = (crmContacts || []).filter((c) => c.companyId === comp.id);
+          const associatedDeals = (crmDeals || []).filter((d) => d.companyId === comp.id);
           const totalVal = associatedDeals.reduce((sum, d) => sum + (d.value || 0), 0);
 
           return (
@@ -137,15 +149,19 @@ export const CrmCompaniesList: React.FC = () => {
                     <button
                       onClick={() => openEditCompany(comp)}
                       className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                      title="Editar empresa"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
-                    <button
-                      onClick={() => deleteCompany(comp.id)}
-                      className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setCompanyToDelete(comp)}
+                        className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors"
+                        title="Eliminar empresa y registros vinculados"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -300,6 +316,69 @@ export const CrmCompaniesList: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar eliminación de empresa en CRM */}
+      {companyToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#12121C] border border-red-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center justify-center text-red-400 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-base">¿Eliminar empresa del CRM?</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Estás a punto de eliminar a <strong className="text-white">{companyToDelete.name}</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-xs text-zinc-300 bg-[#161622] p-3.5 rounded-xl border border-[#242436] space-y-1.5">
+              <p className="text-red-300 font-semibold">Advertencia de integridad:</p>
+              <p className="text-zinc-400 leading-relaxed">
+                Se eliminará la empresa y se limpiarán en cascada todos los contactos, tratos y seguimientos vinculados para no dejar registros huérfanos en el sistema ni en el calendario.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#222234]">
+              <button
+                type="button"
+                onClick={() => setCompanyToDelete(null)}
+                disabled={isDeletingCompany}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsDeletingCompany(true);
+                  try {
+                    await deleteCompany(companyToDelete.id);
+                    setCompanyToDelete(null);
+                  } finally {
+                    setIsDeletingCompany(false);
+                  }
+                }}
+                disabled={isDeletingCompany}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-red-950/50 cursor-pointer"
+              >
+                {isDeletingCompany ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Eliminar Definitivamente</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
