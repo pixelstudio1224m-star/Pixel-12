@@ -26,7 +26,9 @@ import {
   CrmFollowUp,
   CommercialAIGenerateRequest,
   CommercialAIGenerateResponse,
-  GoogleAdsAccount
+  GoogleAdsAccount,
+  Member,
+  TeamMember
 } from '../types';
 import { initialWorkspaceData } from '../lib/defaultData';
 import { initialBlogPosts } from '../lib/blogData';
@@ -35,7 +37,10 @@ import {
   initialAgencyPlans,
   initialAgencyServices,
   initialCommercialSettings,
-  initialImageLibraryItems
+  initialImageLibraryItems,
+  normalizeQuote,
+  formatBankDetails,
+  formatTerms
 } from '../lib/quotesData';
 import {
   initialCrmPipelines,
@@ -88,12 +93,14 @@ import {
   generateCommercialAIApi,
   deactivateTeamMemberApi,
   reactivateTeamMemberApi,
+  deleteTeamMemberApi,
   deleteClientApi,
   bulkImportPostsApi
 } from '../lib/api';
 
 export type ViewType =
   | 'dashboard'
+  | 'ai-studio'
   | 'crm'
   | 'quotes'
   | 'blog'
@@ -149,6 +156,7 @@ interface WorkspaceContextType {
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   changeTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
+  updateTaskProgress: (taskId: string, progress: number, autoSyncStatus?: boolean) => Promise<void>;
   // Campaign Operations
   addCampaign: (campaign: Campaign) => Promise<void>;
   updateCampaign: (campaign: Campaign) => Promise<void>;
@@ -163,6 +171,9 @@ interface WorkspaceContextType {
   // Team Management
   deactivateTeamMember: (memberId: string) => Promise<void>;
   reactivateTeamMember: (memberId: string) => Promise<void>;
+  deleteTeamMember: (memberId: string, reassignToMemberId?: string) => Promise<void>;
+  addTeamMember: (member: Member, invitation?: any) => Promise<void>;
+  persistState: (updated: WorkspaceData) => Promise<void>;
   // Settings
   updateSettings: (settings: Partial<WorkspaceData['workspaceSettings']>) => Promise<void>;
   // Modals
@@ -363,7 +374,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isCreateBlogOpen, setIsCreateBlogOpen] = useState<boolean>(false);
 
   // Quotes states (Pixel 12 OS)
-  const [quotes, setQuotes] = useState<QuoteProposal[]>(initialQuoteProposals);
+  const [quotes, setQuotes] = useState<QuoteProposal[]>(() => initialQuoteProposals.map(normalizeQuote));
   const [plans, setPlans] = useState<AgencyPlan[]>(initialAgencyPlans);
   const [customServices, setCustomServices] = useState<AgencyCustomService[]>(initialAgencyServices);
   const [commercialSettings, setCommercialSettings] = useState<CommercialSettings>(initialCommercialSettings);
@@ -414,7 +425,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (isMounted) {
           setData(ws);
           if (ws.quotes && Array.isArray(ws.quotes)) {
-            setQuotes(ws.quotes);
+            setQuotes(ws.quotes.map(normalizeQuote));
           }
           if (ws.plans && Array.isArray(ws.plans)) {
             setPlans(ws.plans);
@@ -481,7 +492,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const ws = await getWorkspace();
       if (ws) {
         setData(ws);
-        if (ws.quotes && Array.isArray(ws.quotes)) setQuotes(ws.quotes);
+        if (ws.quotes && Array.isArray(ws.quotes)) setQuotes(ws.quotes.map(normalizeQuote));
         if (ws.plans && Array.isArray(ws.plans)) setPlans(ws.plans);
         if (ws.customServices && Array.isArray(ws.customServices)) setCustomServices(ws.customServices);
         if (ws.commercialSettings) setCommercialSettings(ws.commercialSettings);
@@ -755,9 +766,17 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         timestamp: new Date().toISOString(),
       };
 
+      let progressUpdate = task.progress;
+      if (newStatus === 'COMPLETED') {
+        progressUpdate = 100;
+      } else if (newStatus === 'TODO' && (task.progress === 100 || task.progress === undefined)) {
+        progressUpdate = 0;
+      }
+
       const updatedTask: Task = {
         ...task,
         status: newStatus,
+        progress: progressUpdate,
         history: [historyEntry, ...(task.history || [])],
       };
 
@@ -791,6 +810,69 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSelectedTask(updatedTask);
       }
       showToast(`Tarea marcada como ${newStatus}`);
+    },
+    [data, persistState, selectedTask, showToast]
+  );
+
+  const updateTaskProgress = useCallback(
+    async (taskId: string, progress: number, autoSyncStatus: boolean = true) => {
+      const task = data.tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      const clampedProgress = Math.max(0, Math.min(100, Math.round(progress)));
+      let nextStatus = task.status;
+      if (autoSyncStatus) {
+        if (clampedProgress === 100 && task.status !== 'COMPLETED') {
+          nextStatus = 'COMPLETED';
+        } else if (clampedProgress < 100 && task.status === 'COMPLETED') {
+          nextStatus = 'IN_PROGRESS';
+        } else if (clampedProgress > 0 && task.status === 'TODO') {
+          nextStatus = 'IN_PROGRESS';
+        }
+      }
+
+      const historyEntry = {
+        id: 'h_' + Date.now(),
+        authorName: data.currentMember?.name || 'Administrador',
+        action: `Progreso actualizado a ${clampedProgress}%${nextStatus !== task.status ? ` (Estado: ${nextStatus})` : ''}`,
+        timestamp: new Date().toISOString(),
+      };
+
+      const updatedTask: Task = {
+        ...task,
+        progress: clampedProgress,
+        status: nextStatus,
+        history: [historyEntry, ...(task.history || [])],
+      };
+
+      // Check if related post should advance to IN_REVIEW when task reaches 100%
+      let updatedPosts = data.posts;
+      if (nextStatus === 'COMPLETED' && task.relatedPostId) {
+        const relatedPost = data.posts.find((p) => p.id === task.relatedPostId);
+        if (relatedPost && relatedPost.status === 'DRAFT') {
+          const otherTasks = data.tasks.filter(
+            (t) => t.relatedPostId === task.relatedPostId && t.id !== task.id
+          );
+          const allCompleted = otherTasks.every((t) => (t.id === taskId ? true : t.status === 'COMPLETED'));
+          if (allCompleted) {
+            updatedPosts = data.posts.map((p) =>
+              p.id === task.relatedPostId ? { ...p, status: 'IN_REVIEW' } : p
+            );
+          }
+        }
+      }
+
+      const updated: WorkspaceData = {
+        ...data,
+        tasks: data.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
+        posts: updatedPosts,
+      };
+
+      await persistState(updated);
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(updatedTask);
+      }
+      showToast(`Progreso actualizado al ${clampedProgress}%`);
     },
     [data, persistState, selectedTask, showToast]
   );
@@ -1076,6 +1158,102 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [data, persistState, showToast]
   );
 
+  const deleteTeamMember = useCallback(
+    async (memberId: string, reassignToMemberId?: string) => {
+      try {
+        const targetMember = data.members.find((m) => m.id === memberId);
+        const targetName = targetMember?.name || 'Colaborador';
+
+        let result: any = null;
+        try {
+          result = await deleteTeamMemberApi(memberId, reassignToMemberId, data.currentMember?.role, data.members);
+        } catch (apiErr) {
+          console.warn('Backend deleteTeamMemberApi sync warning:', apiErr);
+        }
+
+        const remainingMembers = data.members.filter((m) => m.id !== memberId);
+        const reassignTargetId =
+          reassignToMemberId ||
+          remainingMembers.find((m) => m.role === 'Owner' || m.role === 'Admin')?.id ||
+          remainingMembers[0]?.id ||
+          data.currentMember?.id;
+        const reassignTarget = remainingMembers.find((m) => m.id === reassignTargetId) || data.currentMember;
+
+        const updatedTasks = data.tasks.map((task) => {
+          if (task.assigneeId === memberId) {
+            return {
+              ...task,
+              assigneeId: reassignTarget?.id || '',
+              assigneeName: reassignTarget?.name || 'Dirección de Operaciones',
+            };
+          }
+          return task;
+        });
+
+        const updatedInvitations = (data.invitations || []).filter(
+          (inv) => inv.email?.toLowerCase() !== targetMember?.email?.toLowerCase()
+        );
+
+        const updated: WorkspaceData = {
+          ...data,
+          members: result?.members || remainingMembers,
+          tasks: updatedTasks,
+          invitations: updatedInvitations,
+          auditLogs: [
+            {
+              id: 'log_' + Date.now(),
+              actorName: data.currentMember?.name || 'Administrador',
+              action: 'Eliminó miembro del equipo',
+              entityType: 'team',
+              entityId: memberId,
+              details: `Eliminó a ${targetName} del equipo.`,
+              timestamp: new Date().toISOString(),
+            },
+            ...(data.auditLogs || []),
+          ],
+        };
+
+        await persistState(updated);
+        showToast(result?.message || `Colaborador ${targetName} eliminado correctamente del equipo.`);
+      } catch (err: any) {
+        showToast(err.message || 'Error al eliminar al colaborador del equipo', 'error');
+        throw err;
+      }
+    },
+    [data, persistState, showToast]
+  );
+
+  const addTeamMember = useCallback(
+    async (member: Member, invitation?: any) => {
+      const currentMembers = Array.isArray(data?.members) ? data.members : [];
+      const exists = currentMembers.some(
+        (m) => m.id === member.id || m.email?.toLowerCase() === member.email?.toLowerCase()
+      );
+      const updatedMembers = exists
+        ? currentMembers.map((m) =>
+            m.id === member.id || m.email?.toLowerCase() === member.email?.toLowerCase() ? { ...m, ...member } : m
+          )
+        : [...currentMembers, member];
+
+      const currentInvs = Array.isArray(data?.invitations) ? data.invitations : [];
+      const updatedInvs = invitation
+        ? [
+            ...currentInvs.filter((i) => i.email?.toLowerCase() !== member.email?.toLowerCase()),
+            invitation,
+          ]
+        : currentInvs;
+
+      const updated: WorkspaceData = {
+        ...data,
+        members: updatedMembers,
+        invitations: updatedInvs,
+      };
+
+      await persistState(updated);
+    },
+    [data, persistState]
+  );
+
   // Settings
   const updateSettings = useCallback(
     async (newSettings: Partial<WorkspaceData['workspaceSettings']>) => {
@@ -1298,7 +1476,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           blogPosts: [saved, ...(data.blogPosts || []).filter((b) => b.id !== saved.id)]
         };
         await persistState(updated);
-        showToast(`Artículo "${saved.title.slice(0, 30)}..." guardado`);
+        showToast(`Artículo "${(saved.title || 'Nuevo artículo').slice(0, 30)}..." guardado`);
         return saved;
       } catch (err: any) {
         showToast(err.message || 'Error al guardar el artículo', 'error');
@@ -1515,16 +1693,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         discountAmount: quoteData.discountAmount ?? 0,
         total: quoteData.total ?? 0,
         paymentTerms:
-          quoteData.paymentTerms ||
-          '50% anticipo al aprobar la cotización y 50% al completar el primer entregable / corte mensual.',
+          typeof quoteData.paymentTerms === 'string'
+            ? quoteData.paymentTerms
+            : formatTerms(quoteData.paymentTerms || commercialSettings.paymentTermsDefault) ||
+              '50% anticipo al aprobar la cotización y 50% al completar el primer entregable / corte mensual.',
         paymentMethods:
-          quoteData.paymentMethods ||
-          commercialSettings.bankDetails ||
-          'Transferencia bancaria Banco Pichincha / Produbanco / Tarjeta de crédito internacional.',
+          typeof quoteData.paymentMethods === 'string'
+            ? quoteData.paymentMethods
+            : formatBankDetails(quoteData.paymentMethods || commercialSettings.bankDetails) ||
+              'Transferencia bancaria Banco Pichincha / Produbanco / Tarjeta de crédito internacional.',
         termsAndConditions:
-          quoteData.termsAndConditions ||
-          commercialSettings.termsAndConditions ||
-          'Validez de la oferta 15 días calendario a partir de su emisión. Pagos no reembolsables una vez iniciada la fase estratégica.',
+          typeof quoteData.termsAndConditions === 'string'
+            ? quoteData.termsAndConditions
+            : formatTerms(quoteData.termsAndConditions || commercialSettings.termsAndConditions || commercialSettings.defaultTerms) ||
+              'Validez de la oferta 15 días calendario a partir de su emisión. Pagos no reembolsables una vez iniciada la fase estratégica.',
         roadmap: quoteData.roadmap || [
           {
             phase: 'Fase 1: Diagnóstico & Onboarding',
@@ -1553,47 +1735,51 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (newQuote.items && newQuote.items.length > 0) {
         const subtotal = newQuote.items.reduce((sum, item) => sum + (Number(item?.total) || 0), 0);
-        const discountAmount = subtotal * ((newQuote.discountPercent || 0) / 100);
-        const baseAfterDiscount = subtotal - discountAmount;
-        const taxAmount = baseAfterDiscount * ((newQuote.taxPercent || 0) / 100);
+        const discountPercent = Number(newQuote.discountPercent) || 0;
+        const discountAmount = (subtotal * discountPercent) / 100;
+        const baseAfterDiscount = Math.max(0, subtotal - discountAmount);
+        const taxPercent = Number(newQuote.taxPercent) || 0;
+        const taxAmount = (baseAfterDiscount * taxPercent) / 100;
         const total = baseAfterDiscount + taxAmount;
-        newQuote.subtotal = Number(subtotal.toFixed(2));
-        newQuote.discountAmount = Number(discountAmount.toFixed(2));
-        newQuote.taxAmount = Number(taxAmount.toFixed(2));
-        newQuote.total = Number(total.toFixed(2));
+        newQuote.subtotal = Number((subtotal || 0).toFixed(2));
+        newQuote.discountAmount = Number((discountAmount || 0).toFixed(2));
+        newQuote.taxAmount = Number((taxAmount || 0).toFixed(2));
+        newQuote.total = Number((total || 0).toFixed(2));
       }
 
       try {
         const saved = await saveQuoteApi(newQuote);
-        setQuotes((prev) => [saved, ...prev]);
+        const normalizedSaved = normalizeQuote(saved);
+        setQuotes((prev) => [normalizedSaved, ...prev]);
         const updatedWorkspace: WorkspaceData = {
           ...data,
-          quotes: [saved, ...quotes],
+          quotes: [normalizedSaved, ...quotes],
           auditLogs: [
             {
               id: 'log_' + Date.now(),
               actorName: data.currentMember?.name || 'Administrador',
               action: 'Creó cotización',
               entityType: 'post' as any,
-              entityId: saved.id,
-              details: `${saved.folio} - ${saved.client.company}`,
+              entityId: normalizedSaved.id,
+              details: `${normalizedSaved.folio} - ${normalizedSaved.client.company}`,
               timestamp: new Date().toISOString()
             },
             ...(data.auditLogs || [])
           ]
         };
         await persistState(updatedWorkspace);
-        showToast(`Cotización ${saved.folio} guardada exitosamente`);
-        return saved;
+        showToast(`Cotización ${normalizedSaved.folio} guardada exitosamente`);
+        return normalizedSaved;
       } catch (e: any) {
-        setQuotes((prev) => [newQuote, ...prev]);
+        const normalizedNew = normalizeQuote(newQuote);
+        setQuotes((prev) => [normalizedNew, ...prev]);
         const updatedWorkspace: WorkspaceData = {
           ...data,
-          quotes: [newQuote, ...quotes]
+          quotes: [normalizedNew, ...quotes]
         };
         await persistState(updatedWorkspace);
         showToast(`Cotización guardada`);
-        return newQuote;
+        return normalizedNew;
       }
     },
     [quotes, activeBrand, commercialSettings, data, persistState, showToast]
@@ -1613,35 +1799,39 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       if (updatedQuote.items) {
-        const subtotal = updatedQuote.items.reduce((sum, item) => sum + item.total, 0);
-        const discountAmount = subtotal * ((updatedQuote.discountPercent || 0) / 100);
-        const baseAfterDiscount = subtotal - discountAmount;
-        const taxAmount = baseAfterDiscount * ((updatedQuote.taxPercent || 0) / 100);
+        const subtotal = updatedQuote.items.reduce((sum, item) => sum + (Number(item?.total) || 0), 0);
+        const discountPercent = Number(updatedQuote.discountPercent) || 0;
+        const discountAmount = (subtotal * discountPercent) / 100;
+        const baseAfterDiscount = Math.max(0, subtotal - discountAmount);
+        const taxPercent = Number(updatedQuote.taxPercent) || 0;
+        const taxAmount = (baseAfterDiscount * taxPercent) / 100;
         const total = baseAfterDiscount + taxAmount;
-        updatedQuote.subtotal = Number(subtotal.toFixed(2));
-        updatedQuote.discountAmount = Number(discountAmount.toFixed(2));
-        updatedQuote.taxAmount = Number(taxAmount.toFixed(2));
-        updatedQuote.total = Number(total.toFixed(2));
+        updatedQuote.subtotal = Number((subtotal || 0).toFixed(2));
+        updatedQuote.discountAmount = Number((discountAmount || 0).toFixed(2));
+        updatedQuote.taxAmount = Number((taxAmount || 0).toFixed(2));
+        updatedQuote.total = Number((total || 0).toFixed(2));
       }
 
+      const normalizedQuote = normalizeQuote(updatedQuote);
+
       try {
-        await saveQuoteApi(updatedQuote);
+        await saveQuoteApi(normalizedQuote);
       } catch (e) {
         console.warn('API save quote failed', e);
       }
 
-      setQuotes((prev) => prev.map((q) => (q.id === id ? updatedQuote : q)));
+      setQuotes((prev) => prev.map((q) => (q.id === id ? normalizedQuote : q)));
       if (selectedQuote && selectedQuote.id === id) {
-        setSelectedQuote(updatedQuote);
+        setSelectedQuote(normalizedQuote);
       }
 
       const updatedWorkspace: WorkspaceData = {
         ...data,
-        quotes: quotes.map((q) => (q.id === id ? updatedQuote : q))
+        quotes: quotes.map((q) => (q.id === id ? normalizedQuote : q))
       };
       await persistState(updatedWorkspace);
-      showToast(`Cotización ${updatedQuote.folio} actualizada`);
-      return updatedQuote;
+      showToast(`Cotización ${normalizedQuote.folio} actualizada`);
+      return normalizedQuote;
     },
     [quotes, selectedQuote, data, persistState, showToast]
   );
@@ -2313,6 +2503,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateTask,
         deleteTask,
         changeTaskStatus,
+        updateTaskProgress,
         addCampaign,
         updateCampaign,
         deleteCampaign,
@@ -2324,6 +2515,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         deleteClient,
         deactivateTeamMember,
         reactivateTeamMember,
+        deleteTeamMember,
+        addTeamMember,
+        persistState,
         updateSettings,
         isCreateWithAIOpen,
         openCreateWithAI: () => setIsCreateWithAIOpen(true),

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWorkspace, ViewType } from '../context/WorkspaceContext';
 import { Platform } from '../types';
+import { getTaskProgress, TaskProgressBar } from '../components/tasks/TaskProgressBar';
 import {
   Sparkles,
   Calendar,
@@ -168,13 +169,22 @@ export const DashboardView: React.FC = () => {
             Genera carruseles, publicaciones individuales y guiones de reels con la estética Negro Obsidian, Acentos Dorados y Tipografía Editorial Oficial.
           </p>
         </div>
-        <button
-          onClick={() => setActiveView('design-content')}
-          className="px-5 py-2.5 rounded-2xl p12-gold-gradient text-black font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-[#D4AF37]/20 hover:brightness-105 transition-all cursor-pointer whitespace-nowrap shrink-0 relative z-10"
-        >
-          <Wand2 className="w-4 h-4 text-black" />
-          <span>Abrir Creador Pixel 12</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 relative z-10 shrink-0">
+          <button
+            onClick={() => setActiveView('ai-studio')}
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-purple-600/25 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Sparkles className="w-4 h-4 text-purple-200" />
+            <span>Estudio Multimodal IA</span>
+          </button>
+          <button
+            onClick={() => setActiveView('design-content')}
+            className="px-4 py-2.5 rounded-2xl p12-gold-gradient text-black font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-[#D4AF37]/20 hover:brightness-105 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Wand2 className="w-4 h-4 text-black" />
+            <span>Creador Pixel 12</span>
+          </button>
+        </div>
       </div>
 
       {/* Metrics Bar */}
@@ -269,14 +279,14 @@ export const DashboardView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1F1F30] text-sm">
-                  {filteredPosts.length === 0 ? (
+                  {(!filteredPosts || filteredPosts.length === 0) ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-xs text-zinc-500">
                         No hay publicaciones programadas con los filtros actuales
                       </td>
                     </tr>
                   ) : (
-                    filteredPosts.slice(0, 5).map((post) => {
+                    (filteredPosts || []).slice(0, 5).map((post) => {
                       const statusDot = getStatusDot(post.status);
                       return (
                         <tr
@@ -390,12 +400,12 @@ export const DashboardView: React.FC = () => {
             </div>
 
             <div className="p-4 space-y-3.5 max-h-[310px] overflow-y-auto">
-              {pendingTasks.length === 0 ? (
+              {(!pendingTasks || pendingTasks.length === 0) ? (
                 <div className="text-xs text-zinc-500 text-center py-6">
                   No hay tareas pendientes en el equipo
                 </div>
               ) : (
-                pendingTasks.slice(0, 4).map((task) => {
+                (pendingTasks || []).slice(0, 4).map((task) => {
                   const barColor =
                     task.priority === 'HIGH'
                       ? 'bg-rose-500'
@@ -417,15 +427,27 @@ export const DashboardView: React.FC = () => {
                         <p className="text-[10px] text-zinc-400 truncate mt-0.5">
                           {task.assigneeName} · Vence {task.deadlineDate} {task.deadlineTime}
                         </p>
-                        {task.priority === 'HIGH' ? (
-                          <div className="mt-1 px-2 py-0.5 bg-rose-950/40 rounded text-[9px] text-rose-300 font-bold inline-block border border-rose-800/40">
-                            ALTA PRIORIDAD
-                          </div>
-                        ) : (
-                          <div className="mt-1 px-2 py-0.5 bg-[#181826] rounded text-[9px] text-zinc-300 font-semibold inline-block border border-[#2A2A3E]">
-                            PRIORIDAD {task.priority}
-                          </div>
-                        )}
+                        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                          <TaskProgressBar
+                            progress={getTaskProgress(task)}
+                            taskTitle={task.title}
+                            interactive={false}
+                            size="sm"
+                            showLabel={true}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2 mt-1.5">
+                          {task.priority === 'HIGH' ? (
+                            <div className="px-2 py-0.5 bg-rose-950/40 rounded text-[9px] text-rose-300 font-bold inline-block border border-rose-800/40">
+                              ALTA PRIORIDAD
+                            </div>
+                          ) : (
+                            <div className="px-2 py-0.5 bg-[#181826] rounded text-[9px] text-zinc-300 font-semibold inline-block border border-[#2A2A3E]">
+                              PRIORIDAD {task.priority}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

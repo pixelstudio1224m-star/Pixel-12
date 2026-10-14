@@ -68,6 +68,11 @@ export const Header: React.FC = () => {
       subtitle: `Visión estratégica y métricas clave para ${activeBrand?.name || 'la Marca'}`,
       tag: 'RESUMEN',
     },
+    'ai-studio': {
+      title: 'Estudio Creativo Multimodal IA',
+      subtitle: 'Gemini 3.x, Veo 3 Video, Google Search Grounding y Transcripción con gemini-3.5-transcribe',
+      tag: 'SUITE MULTIMODAL',
+    },
     crm: {
       title: 'CRM & Pipelines Comerciales',
       subtitle: 'Gestión 360° de Leads, Clientes, Pipelines de Ventas, Tareas y Seguimientos con IA',
@@ -276,12 +281,12 @@ export const Header: React.FC = () => {
               </div>
 
               <div className="max-h-64 overflow-y-auto divide-y divide-[#1D1D2C]">
-                {notifications.length === 0 ? (
+                {(!notifications || notifications.length === 0) ? (
                   <div className="px-4 py-6 text-center text-xs text-zinc-400">
                     No hay notificaciones pendientes
                   </div>
                 ) : (
-                  notifications.slice(0, 8).map((notif) => (
+                  (notifications || []).slice(0, 8).map((notif) => (
                     <div
                       key={notif.id}
                       onClick={() => {

@@ -2,6 +2,8 @@ import {
   AgencyPlan,
   AgencyCustomService,
   QuoteProposal,
+  QuoteItem,
+  RoadmapPhase,
   CommercialSettings,
   ImageLibraryItem,
 } from '../types/quotes';
@@ -307,7 +309,137 @@ export const initialCommercialSettings: CommercialSettings = {
   ],
 };
 
-export const initialQuoteProposals: QuoteProposal[] = [
+export function formatBankDetails(bank: any): string {
+  if (!bank) return '';
+  if (typeof bank === 'string') return bank;
+  if (typeof bank === 'object') {
+    const parts: string[] = [];
+    if (bank.bankName) parts.push(`Banco: ${bank.bankName}`);
+    if (bank.accountType) parts.push(`Tipo de Cuenta: ${bank.accountType}`);
+    if (bank.accountNumber) parts.push(`N° de Cuenta: ${bank.accountNumber}`);
+    if (bank.beneficiaryName) parts.push(`Beneficiario: ${bank.beneficiaryName}`);
+    if (bank.taxId) parts.push(`Identificación / RUC: ${bank.taxId}`);
+    if (bank.email) parts.push(`Email de Confirmación: ${bank.email}`);
+    if (bank.stripeOrLink) parts.push(`Link de Pago Online: ${bank.stripeOrLink}`);
+
+    if (parts.length > 0) {
+      return parts.join('\n');
+    }
+    return Object.entries(bank)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n');
+  }
+  return String(bank);
+}
+
+export function formatTerms(terms: any): string {
+  if (!terms) return '';
+  if (typeof terms === 'string') return terms;
+  if (Array.isArray(terms)) {
+    return terms
+      .map((t) => (typeof t === 'string' ? `• ${t}` : JSON.stringify(t)))
+      .join('\n');
+  }
+  if (typeof terms === 'object') {
+    return Object.values(terms)
+      .filter((v) => typeof v === 'string' || typeof v === 'number')
+      .join('\n');
+  }
+  return String(terms);
+}
+
+export function normalizeQuote(q: any): QuoteProposal {
+  if (!q) return q;
+
+  const items: QuoteItem[] = Array.isArray(q.items) && q.items.length > 0
+    ? q.items.map((it: any, idx: number) => ({
+        id: it.id || `item_${idx}`,
+        type: it.type || 'SERVICE',
+        name: it.name || it.title || 'Servicio Estratégico',
+        description: it.description || '',
+        quantity: Number(it.quantity) || 1,
+        unitPrice: Number(it.unitPrice) || 0,
+        total: Number(it.total ?? it.totalPrice ?? ((Number(it.quantity) || 1) * (Number(it.unitPrice) || 0))) || 0,
+        deliverables: Array.isArray(it.deliverables) ? it.deliverables : []
+      }))
+    : Array.isArray(q.commercial?.items)
+    ? q.commercial.items.map((it: any, idx: number) => ({
+        id: it.id || `item_${idx}`,
+        type: (it.type?.toUpperCase() === 'PLAN' ? 'PLAN' : 'SERVICE'),
+        name: it.title || it.name || 'Servicio Estratégico',
+        description: it.description || '',
+        quantity: Number(it.quantity) || 1,
+        unitPrice: Number(it.unitPrice) || 0,
+        total: Number(it.totalPrice ?? it.total ?? ((Number(it.quantity) || 1) * (Number(it.unitPrice) || 0))) || 0,
+        deliverables: Array.isArray(it.deliverables) ? it.deliverables : []
+      }))
+    : [];
+
+  const subtotal = Number(q.subtotal ?? q.commercial?.subtotal ?? items.reduce((s, it) => s + (Number(it?.total) || 0), 0)) || 0;
+  const discountPercent = Number(q.discountPercent ?? (q.commercial?.discountType === 'percentage' ? q.commercial?.discountValue : 0)) || 0;
+  const discountAmount = Number(q.discountAmount ?? q.commercial?.discountAmount ?? ((subtotal * discountPercent) / 100)) || 0;
+  const taxPercent = Number(q.taxPercent ?? q.commercial?.taxPercentage ?? 15) || 0;
+  const taxableBase = Math.max(0, subtotal - discountAmount);
+  const taxAmount = Number(q.taxAmount ?? q.commercial?.taxAmount ?? ((taxableBase * taxPercent) / 100)) || 0;
+  const total = Number(q.total ?? q.commercial?.totalPrice ?? (taxableBase + taxAmount)) || 0;
+
+  const roadmap: RoadmapPhase[] = Array.isArray(q.roadmap) && q.roadmap.length > 0
+    ? q.roadmap
+    : Array.isArray(q.aiNarrative?.roadmapPhases)
+    ? q.aiNarrative.roadmapPhases.map((rp: any) => ({
+        phase: rp.phase || 'Fase',
+        title: rp.title || '',
+        duration: rp.duration || '',
+        description: rp.description || '',
+        deliverables: Array.isArray(rp.deliverables) ? rp.deliverables : []
+      }))
+    : [];
+
+  const rawPaymentMethods = q.paymentMethods ?? q.commercial?.paymentMethod;
+  const safePaymentMethods = typeof rawPaymentMethods === 'string'
+    ? rawPaymentMethods
+    : formatBankDetails(rawPaymentMethods || 'Transferencia Bancaria / Tarjeta de Crédito');
+
+  const rawTerms = q.termsAndConditions ?? q.commercial?.termsAndConditions ?? q.defaultTerms;
+  const safeTermsAndConditions = typeof rawTerms === 'string'
+    ? rawTerms
+    : formatTerms(rawTerms || 'Validez 15 días calendario a partir de su emisión. Pagos no reembolsables una vez iniciada la fase estratégica.');
+
+  const rawPaymentTerms = q.paymentTerms ?? q.commercial?.paymentTerms;
+  const safePaymentTerms = typeof rawPaymentTerms === 'string'
+    ? rawPaymentTerms
+    : '50% anticipo al iniciar y 50% al corte mensual.';
+
+  return {
+    ...q,
+    title: q.title || q.aiNarrative?.title || `Propuesta Comercial — ${q.client?.company || 'Cliente'}`,
+    executiveSummary: q.executiveSummary || q.aiNarrative?.executiveSummary || '',
+    presentationText: q.presentationText || q.aiNarrative?.agencyIntro || '',
+    proposedSolution: q.proposedSolution || q.aiNarrative?.proposedSolution || '',
+    clientNeeds: Array.isArray(q.clientNeeds) && q.clientNeeds.length > 0
+      ? q.clientNeeds
+      : (typeof q.aiNarrative?.clientDiagnosis === 'string'
+          ? q.aiNarrative.clientDiagnosis.split('\n').filter(Boolean)
+          : []),
+    items,
+    subtotal: Number(subtotal.toFixed(2)),
+    discountPercent,
+    discountAmount: Number(discountAmount.toFixed(2)),
+    taxPercent,
+    taxAmount: Number(taxAmount.toFixed(2)),
+    total: Number(total.toFixed(2)),
+    currency: q.currency || q.commercial?.currency || 'USD',
+    issueDate: q.issueDate || q.dates?.issueDate || new Date().toISOString().split('T')[0],
+    validUntil: q.validUntil || q.dates?.validUntilDate || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
+    paymentTerms: safePaymentTerms,
+    paymentMethods: safePaymentMethods,
+    termsAndConditions: safeTermsAndConditions,
+    notes: typeof q.notes === 'string' ? q.notes : '',
+    roadmap
+  };
+}
+
+const rawInitialQuoteProposals: QuoteProposal[] = [
   {
     id: 'quote_p12_001',
     folio: 'P12-COT-2026-001',
@@ -713,6 +845,8 @@ export const initialQuoteProposals: QuoteProposal[] = [
     updatedAt: '2026-09-12T15:20:00Z',
   },
 ];
+
+export const initialQuoteProposals: QuoteProposal[] = rawInitialQuoteProposals.map(normalizeQuote);
 
 export const initialImageLibraryItems: ImageLibraryItem[] = [
   {

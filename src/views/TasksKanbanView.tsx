@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { Task, TaskStatus, TaskPriority } from '../types';
+import { TaskProgressBar, getTaskProgress } from '../components/tasks/TaskProgressBar';
+import { TaskTagBadge, PRESET_TAG_CATEGORIES } from '../components/tasks/TaskTags';
 import {
   Kanban as KanbanIcon,
   Plus,
@@ -12,15 +14,27 @@ import {
   ArrowRight,
   ArrowLeft,
   Filter,
-  CheckSquare
+  CheckSquare,
+  Sliders,
+  Check,
+  Tag as TagIcon
 } from 'lucide-react';
 
 export const TasksKanbanView: React.FC = () => {
-  const { data, activeBrand, openTaskDetail, openPostDetail, addTask, changeTaskStatus, showToast } =
-    useWorkspace();
+  const {
+    data,
+    activeBrand,
+    openTaskDetail,
+    openPostDetail,
+    addTask,
+    changeTaskStatus,
+    updateTaskProgress,
+    showToast,
+  } = useWorkspace();
 
   const [memberFilter, setMemberFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [tagFilter, setTagFilter] = useState('ALL');
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
   // New task form state
@@ -30,6 +44,20 @@ export const TasksKanbanView: React.FC = () => {
   const [newPriority, setNewPriority] = useState<TaskPriority>('HIGH');
   const [newDeadlineDate, setNewDeadlineDate] = useState('2026-09-10');
   const [newDeadlineTime, setNewDeadlineTime] = useState('17:00');
+  const [newProgress, setNewProgress] = useState(0);
+  const [newTags, setNewTags] = useState<string[]>(['Diseño']);
+
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    (data?.tasks || []).forEach((t) => {
+      (t.tags || []).forEach((tag) => tagSet.add(tag));
+    });
+    // Ensure standard presets are easily discoverable in filter
+    ['Diseño', 'Estrategia', 'Copywriting', 'Desarrollo', 'Marketing', 'Audiovisual', 'Urgente', 'Revisión Cliente'].forEach(
+      (p) => tagSet.add(p)
+    );
+    return Array.from(tagSet);
+  }, [data?.tasks]);
 
   const filteredTasks = useMemo(() => {
     const tasks = data?.tasks || [];
@@ -37,9 +65,15 @@ export const TasksKanbanView: React.FC = () => {
       if (!t) return false;
       if (memberFilter !== 'ALL' && t.assigneeId !== memberFilter) return false;
       if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
+      if (
+        tagFilter !== 'ALL' &&
+        !(t.tags || []).some((tag) => tag.toLowerCase() === tagFilter.toLowerCase())
+      ) {
+        return false;
+      }
       return true;
     });
-  }, [data?.tasks, memberFilter, priorityFilter]);
+  }, [data?.tasks, memberFilter, priorityFilter, tagFilter]);
 
   const columns: Array<{ id: TaskStatus; label: string; color: string; border: string }> = [
     { id: 'TODO', label: 'Por hacer (TODO)', color: 'bg-slate-100 text-slate-700', border: 'border-slate-200' },
@@ -67,8 +101,9 @@ export const TasksKanbanView: React.FC = () => {
       startDate: '2026-09-02',
       deadlineDate: newDeadlineDate,
       deadlineTime: newDeadlineTime,
-      status: 'TODO',
-      tags: [assignee.role],
+      status: newProgress === 100 ? 'COMPLETED' : (newProgress > 0 ? 'IN_PROGRESS' : 'TODO'),
+      progress: newProgress,
+      tags: newTags.length > 0 ? newTags : [assignee.role],
       checklist: [
         { id: 'c1', text: 'Revisar requerimientos', completed: false },
         { id: 'c2', text: 'Ejecutar entregable', completed: false },
@@ -82,6 +117,8 @@ export const TasksKanbanView: React.FC = () => {
     setIsCreatingTask(false);
     setNewTitle('');
     setNewDescription('');
+    setNewProgress(0);
+    setNewTags(['Diseño']);
   };
 
   const getNextStatus = (current: TaskStatus): TaskStatus | null => {
@@ -141,6 +178,24 @@ export const TasksKanbanView: React.FC = () => {
             <option value="MEDIUM">Media (MEDIUM)</option>
             <option value="LOW">Baja (LOW)</option>
           </select>
+
+          {/* Tag Filter */}
+          <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 py-0.5 sm:py-1">
+            <TagIcon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <select
+              aria-label="Filtrar por etiqueta"
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              className="text-xs bg-transparent border-0 outline-none cursor-pointer pr-1"
+            >
+              <option value="ALL">Todas las etiquetas ({availableTags.length})</option>
+              {availableTags.map((tag) => (
+                <option key={tag} value={tag}>
+                  #{tag}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button
             onClick={() => setIsCreatingTask(true)}
@@ -239,6 +294,81 @@ export const TasksKanbanView: React.FC = () => {
               </div>
             </div>
 
+            {/* Initial Progress Percentage */}
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                  Progreso Inicial de la Tarea
+                </label>
+                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                  {newProgress}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={newProgress}
+                onChange={(e) => setNewProgress(Number(e.target.value))}
+                className="w-full accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+              />
+              <div className="flex justify-between text-[9px] text-slate-400 font-medium mt-1">
+                <span>0% (Por hacer)</span>
+                <span>50% (En progreso)</span>
+                <span>100% (Completada)</span>
+              </div>
+            </div>
+
+            {/* Tag Selection for New Task */}
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <TagIcon className="w-3.5 h-3.5 text-indigo-600" />
+                  Etiquetas de Categorización
+                </label>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {newTags.length} seleccionada{newTags.length === 1 ? '' : 's'}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Diseño',
+                  'Estrategia',
+                  'Copywriting',
+                  'Desarrollo',
+                  'Marketing',
+                  'Audiovisual',
+                  'Urgente',
+                  'Revisión Cliente',
+                ].map((tag) => {
+                  const isSelected = newTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setNewTags(newTags.filter((t) => t !== tag));
+                        } else {
+                          setNewTags([...newTags, tag]);
+                        }
+                      }}
+                      className={`px-2 py-0.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3" />}
+                      <span>{tag}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
@@ -262,6 +392,13 @@ export const TasksKanbanView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         {columns.map((col) => {
           const colTasks = filteredTasks.filter((t) => t.status === col.id);
+          const avgProgress =
+            colTasks.length > 0
+              ? Math.round(
+                  colTasks.reduce((acc, t) => acc + getTaskProgress(t), 0) / colTasks.length
+                )
+              : 0;
+
           return (
             <div
               key={col.id}
@@ -275,6 +412,14 @@ export const TasksKanbanView: React.FC = () => {
                   </span>
                   <span className="text-xs font-bold text-slate-400">{colTasks.length}</span>
                 </div>
+                {colTasks.length > 0 && (
+                  <span
+                    title={`Promedio de avance: ${avgProgress}%`}
+                    className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-full border border-slate-200"
+                  >
+                    {avgProgress}%
+                  </span>
+                )}
               </div>
 
               {/* Task Cards in Column */}
@@ -296,7 +441,7 @@ export const TasksKanbanView: React.FC = () => {
                         onClick={() => openTaskDetail(task)}
                         className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-xs transition-all cursor-pointer space-y-2.5 group"
                       >
-                        {/* Priority & Tags */}
+                        {/* Priority & Deadline */}
                         <div className="flex items-center justify-between">
                           <span
                             className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded uppercase ${
@@ -313,6 +458,15 @@ export const TasksKanbanView: React.FC = () => {
                             {task.deadlineDate}
                           </span>
                         </div>
+
+                        {/* Tags Badges */}
+                        {task.tags && task.tags.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {task.tags.map((tag) => (
+                              <TaskTagBadge key={tag} tag={tag} size="xs" />
+                            ))}
+                          </div>
+                        )}
 
                         {/* Title & Desc */}
                         <div>
@@ -341,8 +495,24 @@ export const TasksKanbanView: React.FC = () => {
                           </div>
                         )}
 
+                        {/* Progress Bar Component with Manual Percentage Update */}
+                        <div
+                          className="pt-2 border-t border-slate-100"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <TaskProgressBar
+                            progress={getTaskProgress(task)}
+                            taskTitle={task.title}
+                            interactive={true}
+                            size="md"
+                            showLabel={true}
+                            showPresets={true}
+                            onChange={(pct) => updateTaskProgress(task.id, pct)}
+                          />
+                        </div>
+
                         {/* Checklist & Assignee */}
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
                           <div className="flex items-center gap-1 text-slate-500">
                             <User className="w-3 h-3 text-slate-400" />
                             <span className="font-semibold text-slate-700">{task.assigneeName}</span>

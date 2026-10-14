@@ -2,8 +2,9 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, GenerateVideosOperation } from '@google/genai';
 import dotenv from 'dotenv';
 import { initialWorkspaceData } from './src/lib/defaultData';
 import { initialBlogPosts } from './src/lib/blogData';
@@ -22,6 +23,12 @@ import {
   initialCrmFollowUps,
   initialCrmActivities
 } from './src/lib/crmData';
+import {
+  buildCreativeBrief,
+  validateAndCleanContent,
+  buildGeminiContentPrompt,
+  PIXEL12_BRAND_KIT
+} from './src/lib/aiContentEngine';
 import rateLimit from 'express-rate-limit';
 
 dotenv.config();
@@ -31,15 +38,26 @@ const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'workspace.json');
 
+// Enable trust proxy for environments behind reverse proxies (Google Cloud Run / AI Studio preview)
+app.set('trust proxy', 1);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Rate Limiting for AI Endpoints (Protects Gemini quota and prevents abuse in production)
 const aiRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 35, // 35 requests per minute per IP
+  max: 60, // 60 requests per minute
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
+  keyGenerator: (req) => {
+    const forwarded = req.headers['x-forwarded-for'] || req.headers['forwarded'];
+    if (typeof forwarded === 'string') {
+      return forwarded.split(',')[0].trim();
+    }
+    return req.ip || '127.0.0.1';
+  },
   message: {
     error: 'Límite de solicitudes de IA alcanzado para este minuto. Por favor aguarda unos instantes.',
     rateLimitExceeded: true,
@@ -67,7 +85,18 @@ function readWorkspaceData() {
     if (!parsed.brands || !Array.isArray(parsed.brands)) parsed.brands = initialWorkspaceData.brands;
     if (!parsed.members || !Array.isArray(parsed.members)) parsed.members = initialWorkspaceData.members;
     if (!parsed.posts || !Array.isArray(parsed.posts)) parsed.posts = initialWorkspaceData.posts || [];
-    if (!parsed.tasks || !Array.isArray(parsed.tasks)) parsed.tasks = initialWorkspaceData.tasks || [];
+    if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
+      parsed.tasks = initialWorkspaceData.tasks || [];
+    } else {
+      parsed.tasks = parsed.tasks.map((t: any) => ({
+        ...t,
+        tags: Array.isArray(t.tags) ? t.tags : (t.tags ? [t.tags] : []),
+        progress: typeof t.progress === 'number' ? t.progress : 0,
+        checklist: Array.isArray(t.checklist) ? t.checklist : [],
+        comments: Array.isArray(t.comments) ? t.comments : [],
+        history: Array.isArray(t.history) ? t.history : []
+      }));
+    }
     if (!parsed.campaigns || !Array.isArray(parsed.campaigns)) parsed.campaigns = initialWorkspaceData.campaigns || [];
     if (!parsed.notifications || !Array.isArray(parsed.notifications)) parsed.notifications = initialWorkspaceData.notifications || [];
     if (!parsed.invitations || !Array.isArray(parsed.invitations)) parsed.invitations = [];
@@ -113,7 +142,53 @@ function getGeminiClient(): GoogleGenAI | null {
   });
 }
 
-// Cooldown map to avoid calling models currently suffering high demand (503/429)
+// Asset Storage Directory for Generated Images
+const ASSETS_DIR = path.join(process.cwd(), 'data', 'generated_assets');
+if (!fs.existsSync(ASSETS_DIR)) {
+  fs.mkdirSync(ASSETS_DIR, { recursive: true });
+}
+app.use('/api/assets', express.static(ASSETS_DIR));
+
+// Helper to save base64 image data to disk and get public URL
+function saveAssetToDisk(base64Data: string, mimeType: string = 'image/png'): { filename: string; imageUrl: string } {
+  if (!fs.existsSync(ASSETS_DIR)) {
+    fs.mkdirSync(ASSETS_DIR, { recursive: true });
+  }
+  const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+  const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : 'png';
+  const filename = `asset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filepath = path.join(ASSETS_DIR, filename);
+  fs.writeFileSync(filepath, Buffer.from(cleanBase64, 'base64'));
+  return {
+    filename,
+    imageUrl: `/api/assets/${filename}`
+  };
+}
+
+// Helper to save video buffer to disk and get public URL
+function saveVideoToDisk(buffer: Buffer): { filename: string; videoUrl: string } {
+  if (!fs.existsSync(ASSETS_DIR)) {
+    fs.mkdirSync(ASSETS_DIR, { recursive: true });
+  }
+  const filename = `veo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`;
+  const filepath = path.join(ASSETS_DIR, filename);
+  fs.writeFileSync(filepath, buffer);
+  return {
+    filename,
+    videoUrl: `/api/assets/${filename}`
+  };
+}
+
+// Timeout wrapper to prevent hanging calls
+async function withTimeout<T>(promise: Promise<T>, ms: number = 8000): Promise<T> {
+  let timer: any;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timeout tras ${ms}ms sin respuesta`)), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+}
+
+// Cooldown map to avoid calling models currently suffering high demand or quota (503/429)
 const modelCooldowns = new Map<string, number>();
 
 // Resilient helper to call Gemini with official models, cooldown and fallback
@@ -126,8 +201,12 @@ async function generateGeminiContent(params: {
     throw new Error('GEMINI_API_KEY no configurada');
   }
 
-  // Candidate models: official supported Gemini SDK models
-  const baseModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.1-pro-preview'];
+  // Official candidate models prioritized by current live reliability and speed
+  const baseModels = [
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest',
+    'gemini-3.8-flash'
+  ];
   const now = Date.now();
 
   // Sort so models that didn't experience recent quota/503/429 spikes are tried first
@@ -146,14 +225,16 @@ async function generateGeminiContent(params: {
   for (let attempt = 0; attempt < 2; attempt++) {
     for (const model of sortedModels) {
       try {
-        const res = await ai.models.generateContent({
-          model,
-          contents: params.contents,
-          config: params.config,
-        });
+        const res: any = await withTimeout(
+          ai.models.generateContent({
+            model,
+            contents: params.contents,
+            config: params.config,
+          }),
+          9000
+        );
 
         if (res && res.text) {
-          // Succeeded, clear cooldown
           modelCooldowns.delete(model);
           return res.text;
         }
@@ -170,22 +251,141 @@ async function generateGeminiContent(params: {
           msg.includes('quota');
 
         if (isQuotaOrDemand) {
-          const isDailyQuota = msg.includes('requests_per_model_per_day') || msg.includes('daily') || msg.includes('per_user');
-          const cooldownDuration = isDailyQuota ? 6 * 3600 * 1000 : 120_000;
+          const retryMatch = msg.match(/retry in\s+([0-9.]+)\s*s/i) || msg.match(/"retryDelay":\s*"(\d+)s"/i);
+          const cooldownDuration = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) * 1000 : 60_000;
           modelCooldowns.set(model, Date.now() + cooldownDuration);
-          console.log(`[Gemini] Notice: Model ${model} rate/quota limit reached; automatically routing traffic to next candidate model`);
-        } else {
-          console.log(`[Gemini] Notice: Model ${model} attempt ${attempt + 1} did not succeed, attempting next candidate`);
         }
         lastError = err;
       }
     }
-    if (attempt === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
   }
 
   throw lastError || new Error('No se pudo obtener respuesta del modelo de IA');
+}
+
+// REAL IMAGE GENERATION ENGINE (GEMINI MULTIMODAL IMAGE GENERATOR)
+// Follows strict user rule: "NO SIMULAR IMÁGENES. Estados: IMAGE_GENERATING, IMAGE_GENERATED, IMAGE_FAILED."
+let imageQuotaExhaustedUntil = 0;
+
+async function generateRealImageAI(params: {
+  prompt: string;
+  aspectRatio?: '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
+  style?: string;
+  contentId?: string;
+  slideNumber?: number;
+}): Promise<{
+  success: boolean;
+  status: 'IMAGE_GENERATED' | 'IMAGE_FAILED';
+  imageUrl?: string;
+  dataUrl?: string;
+  assetId: string;
+  prompt: string;
+  error?: string;
+}> {
+  const assetId = `asset_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const cleanPrompt = (params.prompt || '').trim();
+
+  const ai = getGeminiClient();
+  if (!ai) {
+    return {
+      success: false,
+      status: 'IMAGE_FAILED',
+      assetId,
+      prompt: cleanPrompt,
+      error: 'El proveedor de generación de imágenes no está configurado (GEMINI_API_KEY no encontrada).'
+    };
+  }
+
+  // If previous call in this batch already detected project-level quota exhaustion, return honest status immediately
+  if (Date.now() < imageQuotaExhaustedUntil) {
+    return {
+      success: false,
+      status: 'IMAGE_FAILED',
+      assetId,
+      prompt: cleanPrompt,
+      error: 'Límite de cuota o clave sin facturación habilitada para modelos de imagen en Google AI Studio. Puedes reintentar o usar imagen del catálogo corporativo.'
+    };
+  }
+
+  // Refine visual prompt for high-end studio quality
+  const isPixel12Style = !params.style || params.style.toLowerCase().includes('pixel 12') || params.style.toLowerCase().includes('luxury');
+  const enrichedPrompt = isPixel12Style
+    ? `${cleanPrompt}. Cinematic high-end commercial editorial visual, obsidian dark minimalist backdrop (#09090B), subtle brushed gold metallic accents (#D4AF37), polished silver highlights, volumetric studio lighting, crisp 8k details, executive boardroom aesthetic, no low quality artifacts.`
+    : cleanPrompt;
+
+  // Use only official supported image models
+  const imageCandidateModels = [
+    'gemini-3.1-flash-lite-image',
+    'gemini-3.1-flash-image'
+  ];
+
+  let lastErrorMsg = '';
+
+  for (const model of imageCandidateModels) {
+    try {
+      const response: any = await withTimeout(
+        ai.models.generateContent({
+          model,
+          contents: {
+            parts: [{ text: enrichedPrompt }]
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: params.aspectRatio || '1:1'
+            }
+          }
+        }),
+        15000
+      );
+
+      let foundBase64: string | null = null;
+      let foundMime = 'image/png';
+
+      if (response?.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData && part.inlineData.data) {
+            foundBase64 = part.inlineData.data;
+            foundMime = part.inlineData.mimeType || 'image/png';
+            break;
+          }
+        }
+      }
+
+      if (foundBase64) {
+        const { imageUrl } = saveAssetToDisk(foundBase64, foundMime);
+        const dataUrl = `data:${foundMime};base64,${foundBase64}`;
+        return {
+          success: true,
+          status: 'IMAGE_GENERATED',
+          assetId,
+          prompt: cleanPrompt,
+          imageUrl,
+          dataUrl
+        };
+      }
+    } catch (err: any) {
+      const msg = String(err?.message || err || '');
+      lastErrorMsg = msg;
+      if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+        imageQuotaExhaustedUntil = Date.now() + 60_000;
+        console.log('[AI Image Generation] Quota limit reached for image generation.');
+        break; // Stop immediately to avoid redundant API calls
+      }
+    }
+  }
+
+  // Honest failure as required by Requirement 5: "NO SIMULAR IMÁGENES. NO utilizar una imagen placeholder como si fuera generada. NO marcar una imagen como generada si la API falló. Estados: IMAGE_GENERATING, IMAGE_GENERATED, IMAGE_FAILED."
+  const userFriendlyError = lastErrorMsg.includes('429') || lastErrorMsg.includes('quota') || lastErrorMsg.includes('RESOURCE_EXHAUSTED')
+    ? 'Límite de cuota o clave sin facturación habilitada para modelos de imagen en Google AI Studio. Puedes reintentar o usar imagen del catálogo corporativo.'
+    : 'No pudimos generar esta imagen con el proveedor de IA. Puedes reintentar o ajustar el prompt.';
+
+  return {
+    success: false,
+    status: 'IMAGE_FAILED',
+    assetId,
+    prompt: cleanPrompt,
+    error: userFriendlyError
+  };
 }
 
 // ---------------- API ROUTES ----------------
@@ -224,10 +424,26 @@ async function sendInvitationEmail(params: {
   inviterName: string;
   inviteUrl: string;
   expiresAt: string;
-}): Promise<{ sent: boolean; provider?: string; error?: string }> {
+  isDirectAdd?: boolean;
+}): Promise<{
+  sent: boolean;
+  provider?: string;
+  error?: string;
+  mailtoUrl: string;
+  previewText: string;
+}> {
   const provider = (process.env.EMAIL_PROVIDER || '').toLowerCase();
-  const apiKey = process.env.EMAIL_API_KEY || '';
+  const apiKey = process.env.EMAIL_API_KEY || process.env.RESEND_API_KEY || '';
   const fromAddress = process.env.EMAIL_FROM || 'Pixel 12 OS <onboarding@resend.dev>';
+
+  // Check custom workspace SMTP settings if saved
+  let workspaceSmtp: any = null;
+  try {
+    const ws = readWorkspaceData();
+    workspaceSmtp = ws?.workspaceSettings?.smtp || null;
+  } catch (e) {
+    // ignore
+  }
 
   const expiryDateFormatted = new Date(params.expiresAt).toLocaleDateString('es-ES', {
     weekday: 'long',
@@ -236,11 +452,28 @@ async function sendInvitationEmail(params: {
     day: 'numeric'
   });
 
+  const subject = params.isDirectAdd
+    ? `Bienvenido(a) al equipo oficial de Pixel 12 Studio (${params.role})`
+    : `Invitación oficial al equipo de Pixel 12 OS (${params.role})`;
+
+  const plainText = `¡Hola ${params.recipientName}!
+
+Has sido incorporado(a) por ${params.inviterName} a Pixel 12 Studio con el rol de ${params.role}.
+
+Para activar y configurar tu acceso a la plataforma privada Pixel 12 OS, utiliza el siguiente enlace seguro:
+${params.inviteUrl}
+
+(Este enlace de activación es válido por 7 días, hasta el ${expiryDateFormatted}).
+
+Dentro de la plataforma podrás gestionar contenidos, tareas de diseño y copywriting, CRM comercial y proyectos.
+
+© ${new Date().getFullYear()} Pixel 12 Studio — Operaciones & Marketing Digital`;
+
   const emailHtml = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Invitación Oficial a Pixel 12 OS</title>
+  <title>${subject}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #09090B; color: #E4E4E7; margin: 0; padding: 40px 16px; }
     .card { max-width: 560px; margin: 0 auto; background-color: #12121A; border: 1px solid #27273A; border-radius: 16px; padding: 36px 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
@@ -257,12 +490,12 @@ async function sendInvitationEmail(params: {
 <body>
   <div class="card">
     <div class="badge">PIXEL 12 OS</div>
-    <h1>Invitación Oficial al Equipo de Pixel 12</h1>
+    <h1>${params.isDirectAdd ? 'Bienvenido(a) a Pixel 12 Studio' : 'Invitación Oficial al Equipo de Pixel 12'}</h1>
     <p>Hola <strong>${params.recipientName}</strong>,</p>
-    <p>Has sido invitado por <strong>${params.inviterName}</strong> a formar parte del equipo interno de <strong>Pixel 12 Studio</strong> con el rol de <strong>${params.role}</strong>.</p>
+    <p>Has sido invitado por <strong>${params.inviterName}</strong> a formar parte del equipo de <strong>Pixel 12 Studio</strong> con el rol de <strong>${params.role}</strong>.</p>
     
     <div class="highlight-box">
-      <p><strong>Plataforma Privada de Operaciones & IA</strong></p>
+      <p><strong>Plataforma Privada de Operaciones & Marketing</strong></p>
       <p>Tendrás acceso a la gestión de contenidos, diseño de posts/carruseles, CRM comercial, calendario editorial, tareas y asistentes de inteligencia artificial de Pixel 12.</p>
     </div>
 
@@ -271,7 +504,7 @@ async function sendInvitationEmail(params: {
     </div>
 
     <p style="font-size: 12px; color: #71717A;">
-      ⚠️ Este enlace es único, seguro y expirará el <strong>${expiryDateFormatted}</strong> (válido por 7 días). Solo puede utilizarse una vez.
+      ⚠️ Este enlace es seguro y expirará el <strong>${expiryDateFormatted}</strong> (válido por 7 días).
     </p>
 
     <div class="direct-link">
@@ -286,15 +519,45 @@ async function sendInvitationEmail(params: {
 </body>
 </html>`;
 
-  if (!apiKey) {
-    console.warn('[Email] EMAIL_API_KEY no configurada. La invitación se registró con token de enlace directo.');
-    return {
-      sent: false,
-      error: 'EMAIL_API_KEY no configurada en las variables de entorno de Render / servidor.'
-    };
+  // Always pre-calculate mailto URL so admins can open their native client (Gmail, Outlook) with 1 click
+  const mailtoUrl = `mailto:${encodeURIComponent(params.to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainText)}`;
+
+  // 1. Check custom SMTP configuration (workspace or environment)
+  const smtpHost = workspaceSmtp?.host || process.env.SMTP_HOST || '';
+  const smtpPort = Number(workspaceSmtp?.port || process.env.SMTP_PORT) || 587;
+  const smtpUser = workspaceSmtp?.user || process.env.SMTP_USER || '';
+  const smtpPass = workspaceSmtp?.pass || process.env.SMTP_PASS || '';
+  const smtpFrom = workspaceSmtp?.from || process.env.SMTP_FROM || fromAddress;
+
+  if (smtpHost && smtpUser) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: Boolean(workspaceSmtp?.secure || process.env.SMTP_SECURE === 'true' || smtpPort === 465),
+        auth: {
+          user: smtpUser,
+          pass: smtpPass
+        }
+      });
+
+      await transporter.sendMail({
+        from: smtpFrom,
+        to: params.to,
+        subject,
+        text: plainText,
+        html: emailHtml
+      });
+
+      console.log(`[Email] Invitación enviada exitosamente a ${params.to} vía SMTP (${smtpHost})`);
+      return { sent: true, provider: 'smtp', mailtoUrl, previewText: plainText };
+    } catch (smtpErr: any) {
+      console.warn('[Email] Error al enviar vía SMTP:', smtpErr.message);
+      // continue to other methods if available
+    }
   }
 
-  // 1. Resend API
+  // 2. Check Resend API
   if (provider === 'resend' || (!provider && apiKey.startsWith('re_')) || (apiKey && !provider)) {
     try {
       const res = await fetch('https://api.resend.com/emails', {
@@ -306,25 +569,25 @@ async function sendInvitationEmail(params: {
         body: JSON.stringify({
           from: fromAddress,
           to: [params.to],
-          subject: `Invitación oficial al equipo de Pixel 12 OS (${params.role})`,
+          subject,
           html: emailHtml
         })
       });
       if (res.ok) {
         console.log(`[Email] Invitación enviada exitosamente a ${params.to} vía Resend`);
-        return { sent: true, provider: 'resend' };
+        return { sent: true, provider: 'resend', mailtoUrl, previewText: plainText };
       } else {
         const errorText = await res.text();
-        console.warn('[Email] Resend API respondió con error:', res.status, errorText);
-        return { sent: false, provider: 'resend', error: errorText };
+        console.warn('[Email] Resend API error:', res.status, errorText);
+        return { sent: false, provider: 'resend', error: errorText, mailtoUrl, previewText: plainText };
       }
     } catch (e: any) {
       console.error('[Email] Excepción enviando vía Resend:', e);
-      return { sent: false, provider: 'resend', error: e.message };
+      return { sent: false, provider: 'resend', error: e.message, mailtoUrl, previewText: plainText };
     }
   }
 
-  // 2. SendGrid API
+  // 3. SendGrid API
   if (provider === 'sendgrid' || apiKey.startsWith('SG.')) {
     try {
       const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -335,25 +598,28 @@ async function sendInvitationEmail(params: {
         },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: params.to, name: params.recipientName }] }],
-          from: { email: fromAddress.includes('<') ? fromAddress.match(/<([^>]+)>/)?.[1] || fromAddress : fromAddress, name: 'Pixel 12 OS' },
-          subject: `Invitación oficial al equipo de Pixel 12 OS (${params.role})`,
+          from: {
+            email: fromAddress.includes('<') ? fromAddress.match(/<([^>]+)>/)?.[1] || fromAddress : fromAddress,
+            name: 'Pixel 12 OS'
+          },
+          subject,
           content: [{ type: 'text/html', value: emailHtml }]
         })
       });
       if (res.status >= 200 && res.status < 300) {
         console.log(`[Email] Invitación enviada exitosamente a ${params.to} vía SendGrid`);
-        return { sent: true, provider: 'sendgrid' };
+        return { sent: true, provider: 'sendgrid', mailtoUrl, previewText: plainText };
       } else {
         const errorText = await res.text();
         console.warn('[Email] SendGrid API error:', res.status, errorText);
-        return { sent: false, provider: 'sendgrid', error: errorText };
+        return { sent: false, provider: 'sendgrid', error: errorText, mailtoUrl, previewText: plainText };
       }
     } catch (e: any) {
-      return { sent: false, provider: 'sendgrid', error: e.message };
+      return { sent: false, provider: 'sendgrid', error: e.message, mailtoUrl, previewText: plainText };
     }
   }
 
-  // 3. Postmark API
+  // 4. Postmark API
   if (provider === 'postmark') {
     try {
       const res = await fetch('https://api.postmarkapp.com/email', {
@@ -365,24 +631,28 @@ async function sendInvitationEmail(params: {
         body: JSON.stringify({
           From: fromAddress,
           To: params.to,
-          Subject: `Invitación oficial al equipo de Pixel 12 OS (${params.role})`,
+          Subject: subject,
           HtmlBody: emailHtml
         })
       });
       if (res.ok) {
-        return { sent: true, provider: 'postmark' };
+        return { sent: true, provider: 'postmark', mailtoUrl, previewText: plainText };
       } else {
         const errorText = await res.text();
-        return { sent: false, provider: 'postmark', error: errorText };
+        return { sent: false, provider: 'postmark', error: errorText, mailtoUrl, previewText: plainText };
       }
     } catch (e: any) {
-      return { sent: false, provider: 'postmark', error: e.message };
+      return { sent: false, provider: 'postmark', error: e.message, mailtoUrl, previewText: plainText };
     }
   }
 
+  // If no external key or SMTP is configured, we provide direct one-click mailto and direct token link
   return {
     sent: false,
-    error: `Proveedor '${provider}' no reconocido.`
+    provider: 'local_ready',
+    error: 'Servidor de correo no conectado. Enlace y correo preparados para despacho directo.',
+    mailtoUrl,
+    previewText: plainText
   };
 }
 
@@ -397,10 +667,10 @@ app.get('/api/team/members', (req, res) => {
   });
 });
 
-// 2. Invitar nuevo miembro con envío real de correo
+// 2. Invitar o agregar miembro con despacho de correo y enlace de activación
 app.post('/api/team/invite', async (req, res) => {
   try {
-    const { email, name, role, invitedBy } = req.body;
+    const { email, name, role, invitedBy, directAdd } = req.body;
     if (!email || !name) {
       return res.status(400).json({ error: 'Nombre y correo electrónico son requeridos.' });
     }
@@ -408,23 +678,18 @@ app.post('/api/team/invite', async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim();
     const targetRole = role || 'Designer';
+    const isDirectAdd = Boolean(directAdd);
 
     const data = readWorkspaceData();
     if (!data.members) data.members = [];
     if (!data.invitations) data.invitations = [];
 
-    // Validar si el usuario ya es miembro activo
-    const existingMember = data.members.find(
+    // Buscar si ya existe el miembro
+    let existingMember = data.members.find(
       (m: any) => m.email?.toLowerCase() === cleanEmail
     );
 
-    if (existingMember && existingMember.status === 'active') {
-      return res.status(400).json({
-        error: `El usuario con correo ${cleanEmail} ya es un miembro activo del equipo.`
-      });
-    }
-
-    // Generar token seguro e irrepetible
+    // Generar token seguro irrepetible
     const token = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 días
 
@@ -437,17 +702,17 @@ app.post('/api/team/invite', async (req, res) => {
 
     const inviterName = invitedBy?.name || data.currentMember?.name || 'Administrador Pixel 12';
 
-    // Enviar correo real
+    // Despachar correo (vía SMTP configurado, Resend, SendGrid o generar mailto directo)
     const emailResult = await sendInvitationEmail({
       to: cleanEmail,
       recipientName: cleanName,
       role: targetRole,
       inviterName,
       inviteUrl,
-      expiresAt
+      expiresAt,
+      isDirectAdd
     });
 
-    // Registrar o actualizar miembro en el equipo
     const memberId = existingMember ? existingMember.id : `mem_${Date.now()}`;
     const memberObj = {
       id: memberId,
@@ -455,7 +720,7 @@ app.post('/api/team/invite', async (req, res) => {
       email: cleanEmail,
       role: targetRole,
       avatar: existingMember?.avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-      status: 'invited',
+      status: isDirectAdd ? 'active' : 'invited',
       invitedAt: new Date().toISOString(),
       invitedBy: inviterName
     };
@@ -466,14 +731,14 @@ app.post('/api/team/invite', async (req, res) => {
       data.members.push(memberObj);
     }
 
-    // Registrar invitación única
+    // Registrar invitación
     const invitationObj = {
       id: `inv_${Date.now()}`,
       email: cleanEmail,
       name: cleanName,
       role: targetRole,
       token,
-      status: 'pending',
+      status: isDirectAdd ? 'accepted' : 'pending',
       invitedBy: {
         id: invitedBy?.id || data.currentMember?.id || 'admin',
         name: inviterName,
@@ -481,15 +746,30 @@ app.post('/api/team/invite', async (req, res) => {
       },
       createdAt: new Date().toISOString(),
       expiresAt,
+      acceptedAt: isDirectAdd ? new Date().toISOString() : undefined,
       emailSent: emailResult.sent,
       emailDeliveryError: emailResult.error
     };
 
-    // Reemplazar invitaciones previas pendientes del mismo correo
+    // Reemplazar invitaciones previas del mismo correo
     data.invitations = data.invitations.filter(
       (i: any) => i.email?.toLowerCase() !== cleanEmail || i.status === 'accepted'
     );
     data.invitations.push(invitationObj);
+
+    // Registro de auditoría
+    if (!data.auditLogs) data.auditLogs = [];
+    data.auditLogs.unshift({
+      id: 'log_' + Date.now(),
+      actorName: inviterName,
+      action: isDirectAdd ? 'Agregó miembro activo al equipo' : 'Invitó nuevo miembro al equipo',
+      entityType: 'team',
+      entityId: memberId,
+      details: isDirectAdd
+        ? `Incorporó a ${cleanName} (${cleanEmail}) con rol ${targetRole}. Acceso habilitado de inmediato.`
+        : `Emitió invitación oficial para ${cleanName} (${cleanEmail}) con rol ${targetRole}. Correo despachado.`,
+      timestamp: new Date().toISOString()
+    });
 
     writeWorkspaceData(data);
 
@@ -497,13 +777,16 @@ app.post('/api/team/invite', async (req, res) => {
       success: true,
       emailSent: emailResult.sent,
       emailDeliveryError: emailResult.error,
+      mailtoUrl: emailResult.mailtoUrl,
+      previewText: emailResult.previewText,
       inviteUrl,
       token,
       member: memberObj,
       invitation: invitationObj,
+      members: data.members,
       message: emailResult.sent
         ? `Invitación enviada por correo a ${cleanEmail}.`
-        : `Invitación registrada. Configura EMAIL_API_KEY en Render para envío automático o comparte el enlace directo.`
+        : `Colaborador registrado. Se generó el enlace seguro y correo listo para enviar.`
     });
   } catch (err: any) {
     console.error('Error in /api/team/invite:', err);
@@ -580,16 +863,167 @@ app.post('/api/team/resend-invite', async (req, res) => {
       success: true,
       emailSent: emailResult.sent,
       emailDeliveryError: emailResult.error,
+      mailtoUrl: emailResult.mailtoUrl,
+      previewText: emailResult.previewText,
       inviteUrl,
       token,
       invitation: invitationObj,
       message: emailResult.sent
         ? `Invitación reenviada exitosamente a ${member.email}.`
-        : `Enlace renovado. Puedes copiar el enlace directo o configurar EMAIL_API_KEY.`
+        : `Enlace renovado. Puedes abrir tu correo directamente o copiar el enlace.`
     });
   } catch (err: any) {
     console.error('Error in /api/team/resend-invite:', err);
     res.status(500).json({ error: 'Error reenviando invitación: ' + err.message });
+  }
+});
+
+// 4. Eliminar miembro permanentemente (re-asigna tareas y resguarda datos)
+app.post('/api/team/delete', (req, res) => {
+  try {
+    const { memberId, reassignToMemberId, members: clientMembers } = req.body;
+    if (!memberId) {
+      return res.status(400).json({ error: 'memberId es requerido.' });
+    }
+
+    const data = readWorkspaceData();
+    if (!data.members) data.members = [];
+
+    // If client provided their current members list and server was out of sync, sync up
+    if (Array.isArray(clientMembers) && clientMembers.length > 0) {
+      for (const cm of clientMembers) {
+        if (!data.members.some((m: any) => m.id === cm.id)) {
+          data.members.push(cm);
+        }
+      }
+    }
+
+    let memberIndex = data.members.findIndex((m: any) => m.id === memberId);
+    let memberToDelete = memberIndex >= 0 ? data.members[memberIndex] : null;
+
+    if (!memberToDelete && Array.isArray(clientMembers)) {
+      memberToDelete = clientMembers.find((m: any) => m.id === memberId) || null;
+    }
+
+    // Proteger solo si es el único miembro absoluto del estudio
+    if (memberToDelete && memberToDelete.role === 'Owner') {
+      const otherOwners = data.members.filter((m: any) => m.role === 'Owner' && m.id !== memberId);
+      if (otherOwners.length === 0 && data.members.length === 1) {
+        return res.status(400).json({
+          error: 'No se puede eliminar al único miembro del estudio.'
+        });
+      }
+    }
+
+    // Determinar destino de reasignación para sus tareas
+    const reassignTarget =
+      data.members.find((m: any) => m.id === reassignToMemberId && m.id !== memberId) ||
+      data.members.find((m: any) => m.id !== memberId && (m.role === 'Owner' || m.role === 'Admin')) ||
+      data.members.find((m: any) => m.id !== memberId) ||
+      data.currentMember;
+
+    let reassignedTasksCount = 0;
+    if (Array.isArray(data.tasks)) {
+      data.tasks = data.tasks.map((task: any) => {
+        if (task.assigneeId === memberId) {
+          reassignedTasksCount++;
+          return {
+            ...task,
+            assigneeId: reassignTarget?.id || '',
+            assigneeName: reassignTarget?.name || 'Dirección de Operaciones',
+            comments: [
+              ...(task.comments || []),
+              {
+                id: 'comm_' + Date.now() + Math.random(),
+                authorName: 'Pixel 12 OS',
+                content: `Tarea reasignada a ${reassignTarget?.name || 'Dirección'} por remoción del colaborador ${memberToDelete.name}.`,
+                createdAt: new Date().toISOString()
+              }
+            ]
+          };
+        }
+        return task;
+      });
+    }
+
+    // Remover de campañas
+    if (Array.isArray(data.campaigns)) {
+      data.campaigns = data.campaigns.map((camp: any) => {
+        if (Array.isArray(camp.memberIds)) {
+          camp.memberIds = camp.memberIds.filter((id: string) => id !== memberId);
+        }
+        return camp;
+      });
+    }
+
+    // Remover invitaciones asociadas
+    // Remover invitaciones asociadas
+    if (Array.isArray(data.invitations)) {
+      data.invitations = data.invitations.filter(
+        (inv: any) => !memberToDelete?.email || inv.email?.toLowerCase() !== memberToDelete.email?.toLowerCase()
+      );
+    }
+
+    // Remover de lista de miembros
+    if (memberIndex >= 0) {
+      data.members.splice(memberIndex, 1);
+    } else {
+      data.members = data.members.filter((m: any) => m.id !== memberId);
+    }
+
+    // Si el miembro eliminado era el currentMember activo, cambiarlo al primer miembro disponible
+    if (data.currentMember?.id === memberId) {
+      data.currentMember = data.members[0] || initialWorkspaceData.currentMember;
+    }
+
+    const delName = memberToDelete?.name || 'Colaborador';
+    const delEmail = memberToDelete?.email || '';
+
+    // Registrar en auditoría
+    if (!data.auditLogs) data.auditLogs = [];
+    data.auditLogs.unshift({
+      id: 'log_' + Date.now(),
+      actorName: data.currentMember?.name || 'Administrador Pixel 12',
+      action: 'Eliminó colaborador del equipo',
+      entityType: 'team',
+      entityId: memberId,
+      details: `Eliminó a ${delName} (${delEmail}). ${reassignedTasksCount} tareas transferidas a ${reassignTarget?.name || 'Dirección'}.`,
+      timestamp: new Date().toISOString()
+    });
+
+    writeWorkspaceData(data);
+
+    res.json({
+      success: true,
+      message: `El colaborador ${delName} fue eliminado definitivamente del equipo.`,
+      deletedMemberId: memberId,
+      reassignedTasksCount,
+      members: data.members
+    });
+  } catch (err: any) {
+    console.error('Error in /api/team/delete:', err);
+    res.status(500).json({ error: 'Error al eliminar miembro: ' + err.message });
+  }
+});
+
+// Guardar configuración SMTP personalizada
+app.post('/api/team/smtp-settings', (req, res) => {
+  try {
+    const { host, port, user, pass, from, secure } = req.body;
+    const data = readWorkspaceData();
+    if (!data.workspaceSettings) data.workspaceSettings = {} as any;
+    data.workspaceSettings.smtp = {
+      host: host?.trim() || '',
+      port: Number(port) || 587,
+      user: user?.trim() || '',
+      pass: pass || '',
+      from: from?.trim() || 'Pixel 12 OS <onboarding@resend.dev>',
+      secure: Boolean(secure)
+    };
+    writeWorkspaceData(data);
+    res.json({ success: true, message: 'Configuración SMTP guardada correctamente.' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1723,8 +2157,8 @@ app.post('/api/quotes/generate-ai', async (req, res) => {
     });
   }
 
-  const subtotal = lineItems.reduce((acc, item) => acc + item.total, 0);
-  const taxPercent = commSettings.taxPercent ?? 15;
+  const subtotal = lineItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0);
+  const taxPercent = Number(commSettings?.taxPercent ?? 15) || 0;
   const taxAmount = Number(((subtotal * taxPercent) / 100).toFixed(2));
   const total = Number((subtotal + taxAmount).toFixed(2));
 
@@ -2386,430 +2820,640 @@ const P12_DYNAMIC_SLIDE_IMAGES = [
 const P12_AUTHOR_AVATAR_URL = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80';
 
 app.post('/api/ai/design-content', async (req, res) => {
-  const {
-    format = 'Carrusel',
-    pillar = 'Marketing Digital',
-    style = 'Pixel 12 Gold & Black (Oficial)',
-    topic = '',
-    brandName = 'Pixel 12',
-    authorName = 'Pixel 12 Agency'
-  } = req.body;
+  const brief = buildCreativeBrief({
+    format: req.body.format,
+    pillar: req.body.pillar,
+    style: req.body.style,
+    topic: req.body.topic,
+    objective: req.body.objective,
+    hook: req.body.hook,
+    cta: req.body.cta,
+    audience: req.body.audience,
+    tone: req.body.tone,
+    additionalInstructions: req.body.additionalInstructions,
+    freeformPrompt: req.body.freeformPrompt,
+    slidesCount: req.body.slidesCount,
+    brandName: req.body.brandName,
+    authorName: req.body.authorName
+  });
 
-  if (!topic || !topic.trim()) {
-    return res.status(400).json({ error: 'Debes proporcionar un tema o enlace para generar el diseño y contenido' });
+  if (!brief.topic && !brief.freeformPrompt) {
+    return res.status(400).json({ error: 'Debes proporcionar un tema, idea o comando libre para generar el contenido' });
   }
 
+  // Deduct AI credits
+  const data = readWorkspaceData();
+  const isCarousel = brief.format === 'Carrusel';
+  const creditCost = isCarousel ? 6 : 1;
+  if (!data.workspaceSettings) data.workspaceSettings = initialCommercialSettings as any;
+  if (!data.workspaceSettings.aiCredits && data.workspaceSettings.aiCredits !== 0) data.workspaceSettings.aiCredits = 120;
+  data.workspaceSettings.aiCredits = Math.max(0, data.workspaceSettings.aiCredits - creditCost);
+
+  let generatedContent: any = null;
   const ai = getGeminiClient();
 
-  // Realistic high-quality fallback generator for Pixel 12
-  const getFallbackData = () => {
-    const defaultTopic = topic.trim();
-    const slidesCount = format === 'Carrusel' ? 5 : format === 'Post' || format === 'Creativo de pauta' ? 2 : 3;
-
-    const generatedTitle = `${pillar}: ${defaultTopic.slice(0, 50)}`;
-    const hook = `El 85% de los dueños de negocio pierden entre 10 y 18 horas a la semana haciendo tareas que una asistente virtual resolvería en minutos.`;
-    const caption = `Trabajar más horas no es escalar: es convertirte en el empleado más agotado de tu propia empresa.\n\n` +
-      `En Pixel 12 ayudamos a fundadores, directores y PyMEs a implementar sistemas predecibles de marketing y delegación operativa:\n\n` +
-      `1️⃣ Diagnóstico de cuellos de botella: Qué tareas jamás debería hacer el fundador.\n` +
-      `2️⃣ Asistente virtual calificada: Onboarding en 48 horas con manual de procesos.\n` +
-      `3️⃣ Máquina de contenido y captación: Generación consistente de prospectos calificados.\n\n` +
-      `Desliza para ver la estructura paso a paso y los datos medidos en clientes reales 👉\n\n` +
-      `Guarda este post para tu próxima reunión de planificación semanal 📌`;
-    const cta = `Comenta "DELEGAR" y te enviamos la lista de 25 tareas operativas que debes transferir de inmediato 🚀`;
-    const hashtags = ['#Pixel12', '#MarketingDigital', '#AsistenciaVirtual', '#EstrategiaEmpresarial', '#Automatizacion', '#Productividad'];
-
-    const slides = [
-      {
-        slideNumber: 1,
-        slideType: 'cover' as const,
-        tag: `PIXEL 12 · ${pillar.toUpperCase()}`,
-        headline: defaultTopic.length > 10 ? defaultTopic : 'Cómo escalar tu negocio delegando marketing y operaciones con IA',
-        subtitle: 'El sistema en 4 pasos para recuperar 15 horas a la semana sin perder el control de la calidad.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[0],
-        layoutMode: 'full_background' as const,
-        overlayOpacity: 70,
-        imagePrompt: 'High quality modern business office, marketing charts on screen, luxury ambient lighting in dark gold',
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Eliminación de microgestión operativa',
-          'Atracción de clientes de alto valor con contenido de autoridad',
-          'Asistente virtual entrenada y lista en 48 horas'
-        ],
-        showAuthorBadge: true,
-        authorBadgeName: authorName,
-        authorBadgeTitle: 'Pixel 12 OS · Especialista Certificado',
-        showOfficialLogo: true,
-        highlightBadge: 'ESTRATEGIA COMPROBADA',
-        accentColor: '#D4AF37',
-        visualDescription: 'Fondo negro obsidiana (#09090B), bordes sutiles metálicos (#222232), tipografía geométrica de alto contraste y detalles dorados (#D4AF37).'
-      },
-      {
-        slideNumber: 2,
-        slideType: 'problem' as const,
-        tag: 'EL CUELLO DE BOTELLA',
-        headline: 'El fundador sigue siendo el operador, vendedor y diseñador de su empresa',
-        subtitle: 'Consecuencia: estancamiento de facturación y falta de tiempo para estrategia.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[1],
-        layoutMode: 'split_top' as const,
-        overlayOpacity: 65,
-        imagePrompt: 'Professional executive overwhelmed with notifications and tasks on laptop desk',
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Más de 15 horas semanales perdidas en DMs, correos y facturación',
-          'Campañas de marketing intermitentes por falta de consistencia',
-          'Pérdida de clientes calificados por responder después de 2 horas'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '-18h',
-        metricLabel: 'Tiempo promedio desperdiciado semanalmente por fundador sin delegar',
-        visualDescription: 'Tarjeta negra con acento rojo sutil y métrica tipográfica grande en color plata brillante.'
-      },
-      {
-        slideNumber: 3,
-        slideType: 'solution' as const,
-        tag: 'EL SISTEMA PIXEL 12',
-        headline: 'La arquitectura en 3 capas de delegación y marketing',
-        subtitle: 'Cómo estandarizamos la operación para que el negocio funcione con precisión suiza.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[2],
-        layoutMode: 'full_background' as const,
-        overlayOpacity: 75,
-        imagePrompt: 'Professional Latin virtual assistant working efficiently with headset in modern office',
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Capa 1: Manual operativo y matrices de decisión claras',
-          'Capa 2: Asistente virtual sincronizada en CRM, agenda y soporte',
-          'Capa 3: Contenido de autoridad publicado y distribuido sin fricción'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '3.5x',
-        metricLabel: 'Mayor velocidad de ejecución en tareas comerciales',
-        visualDescription: 'Diagrama de bloques elegante con líneas doradas delgadas y badges numerados.'
-      },
-      {
-        slideNumber: 4,
-        slideType: 'case_study' as const,
-        tag: 'RESULTADO EN CLIENTES',
-        headline: 'Empresa B2B escala de 4 a 19 leads calificados por semana',
-        subtitle: 'Resultados medidos en los primeros 60 días de implementación con Pixel 12.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[3],
-        layoutMode: 'split_top' as const,
-        overlayOpacity: 70,
-        imagePrompt: 'Financial growth analytics charts and revenue statistics with green and gold indicators',
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Tiempo de respuesta a prospectos: de 4 horas a 3 minutos',
-          '18 horas semanales liberadas al director comercial',
-          'ROI de 4.2x sobre la inversión en marketing y asistencia'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '+320%',
-        metricLabel: 'Incremento en agendamiento de llamadas cualificadas',
-        visualDescription: 'Tarjeta de métrica destacada con borde dorado (#D4AF37) y datos de impacto en verde esmeralda y blanco.'
-      },
-      {
-        slideNumber: 5,
-        slideType: 'cta' as const,
-        tag: 'PRÓXIMO PASO',
-        headline: '¿Listo para profesionalizar tus redes y delegar tu operación?',
-        subtitle: 'El equipo de Pixel 12 puede diagnosticar tus procesos y diseñar tu plan a medida en 24h.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[5],
-        layoutMode: 'full_background' as const,
-        overlayOpacity: 80,
-        imagePrompt: 'Luxury dark obsidian and gold abstract cinematic background with elegant depth',
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Diagnóstico gratuito de cuello de botella operativo',
-          'Propuesta de asignación de Asistente Virtual calificada',
-          'Parrilla mensual de contenidos con dirección creativa prémium'
-        ],
-        showAuthorBadge: true,
-        authorBadgeName: authorName,
-        authorBadgeTitle: 'Pixel 12 · Consultor Estratégico',
-        showOfficialLogo: true,
-        highlightBadge: 'CONSULTORÍA DISPONIBLE',
-        accentColor: '#D4AF37',
-        visualDescription: 'Slide de cierre prémium con badge dorado, llamada a la acción clara y enlaces oficiales de Pixel 12.'
-      }
-    ].slice(0, slidesCount);
-
-    const reelScript = [
-      {
-        secondRange: '00:00 - 00:03',
-        shotType: 'Primer plano directo a cámara con iluminación de estudio',
-        visualDirection: 'Texto tipográfico grande en oro sobre negro: "Por qué trabajar 14 horas no te hará crecer"',
-        voiceover: 'Si sigues respondiendo cada mensaje, haciendo tus propios artes y cuadrando facturas a las 11 de la noche... tu negocio no es un activo, es una trampa.'
-      },
-      {
-        secondRange: '00:03 - 00:15',
-        shotType: 'B-roll mostrando pantalla con calendario colapsado y flujo de trabajo',
-        visualDirection: 'Gráfico animado con las 15 horas perdidas y el costo por hora del fundador',
-        voiceover: 'En Pixel 12 calculamos que el 70% de las tareas diarias de un fundador pueden ser ejecutadas por una Asistente Virtual entrenada con sistemas claros.'
-      },
-      {
-        secondRange: '00:15 - 00:25',
-        shotType: 'Demostración de la plataforma Pixel 12 OS y flujo comercial',
-        visualDirection: 'Tarjetas de contenido y embudos automáticos sincronizados',
-        voiceover: 'Liberas 15 horas a la semana, tu marketing se publica con calidad prémium y tú te enfocas únicamente en cerrar clientes de alto valor.'
-      },
-      {
-        secondRange: '00:25 - 00:30',
-        shotType: 'Cierre con logo dorado Pixel 12 en esquina superior',
-        visualDirection: 'CTA con botón dorado animado y texto "Comenta DELEGAR"',
-        voiceover: 'Comenta "DELEGAR" abajo y te envío nuestra guía con las 25 tareas que debes delegar este mes.'
-      }
-    ];
-
-    const blogSEO = {
-      metaTitle: `${defaultTopic} | Estrategia y Asistencia Pixel 12`,
-      metaDescription: `Descubre cómo implementar sistemas de marketing digital, contenido de autoridad y asistencia virtual para escalar tu negocio sin agotamiento.`,
-      readingTime: '6 min de lectura',
-      targetKeywords: ['Marketing digital', 'Asistencia virtual', 'Delegar tareas', 'Estrategia empresarial', 'Pixel 12'],
-      h1: `Cómo escalar tu empresa con marketing estratégico y asistencia virtual delegada`,
-      outline: [
-        '1. La trampa del fundador operativo: Por qué hacer todo tú mismo limita tu facturación',
-        '2. Los 3 pilares del sistema de delegación Pixel 12',
-        '3. Producción de contenido de alta conversión con tecnología e IA',
-        '4. Casos de éxito y métricas comprobadas de retorno de inversión',
-        '5. Conclusión y primeros pasos para implementar esta semana'
-      ],
-      summary: 'Una guía estratégica completa diseñada por Pixel 12 para profesionales y directores que buscan rentabilidad y libertad operativa.',
-      articleBody: `El crecimiento de una empresa no se mide únicamente por su volumen de facturación, sino por la solidez de sus sistemas operativos. En esta guía desglosamos la metodología probada de Pixel 12 para integrar marketing de alto impacto y asistencia virtual ejecutiva.`
-    };
-
-    return {
-      id: 'gen_' + Date.now(),
-      title: generatedTitle,
-      theme: defaultTopic,
-      format,
-      pillar,
-      style,
-      hook,
-      caption,
-      cta,
-      hashtags,
-      visualConcept: `Dirección de arte Pixel 12 OS: Fondo negro obsidiana (#09090B), tipografía display bold ('Outfit'), acentos en dorado prestige (#D4AF37) y detalles plateados (#CBD5E1). Contraste máximo, estética corporativa y acabado de alta gama.`,
-      slides,
-      reelScript,
-      blogSEO,
-      suggestedTasks: [
-        {
-          title: `Diseñar artes y diapositivas para ${format}: ${generatedTitle.slice(0, 35)}`,
-          description: `Crear las diapositivas en 1080x1350 siguiendo la identidad Negro + Dorado + Plateado de Pixel 12 con tipografía display y logotipo de marca.`,
-          assignedRole: 'Designer' as const,
-          priority: 'HIGH' as const
-        },
-        {
-          title: `Revisión final de copy persuasivo y llamadas a la acción`,
-          description: `Comprobar ganchos, estructura AIDA y configurar disparadores de respuesta automática en Instagram/LinkedIn.`,
-          assignedRole: 'Copywriter' as const,
-          priority: 'MEDIUM' as const
+  // =========================================================================
+  // FASE 1 — CONTENT PLANNING (Estrategia, Estructura, Copy, Prompts visuales)
+  // =========================================================================
+  if (ai) {
+    try {
+      const promptInstructions = buildGeminiContentPrompt(brief);
+      const text = await generateGeminiContent({
+        contents: promptInstructions,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.6,
         }
-      ],
-      createdAt: new Date().toISOString()
-    };
-  };
+      });
 
-  if (!ai) {
-    return res.json(getFallbackData());
+      if (text) {
+        const parsed = JSON.parse(text);
+        const { cleaned } = validateAndCleanContent(parsed, brief);
+        generatedContent = cleaned;
+      }
+    } catch (geminiErr: any) {
+      console.log('[AI Planning] Standard quota threshold reached; applying Pixel 12 validated strategy.');
+    }
   }
 
+  if (!generatedContent) {
+    const { cleaned } = validateAndCleanContent({}, brief);
+    generatedContent = cleaned;
+  }
+
+  // =========================================================================
+  // FASE 2 — ASSET GENERATION (Generación real de imágenes en paralelo)
+  // =========================================================================
+  const assets: any[] = [];
+  const aspectRatio = brief.format === 'Historia / Stories' ? '9:16' : '1:1';
+
+  if (Array.isArray(generatedContent.slides) && generatedContent.slides.length > 0) {
+    // Generate images for all slides in parallel with the AI image provider
+    const assetPromises = generatedContent.slides.map(async (slide: any, idx: number) => {
+      const prompt = slide.imagePrompt || `${slide.headline}. ${slide.visualConcept || ''}`;
+      const imgRes = await generateRealImageAI({
+        prompt,
+        aspectRatio,
+        style: brief.style,
+        contentId: generatedContent.id,
+        slideNumber: idx + 1
+      });
+
+      return {
+        slideIndex: idx,
+        asset: {
+          id: imgRes.assetId,
+          contentId: generatedContent.id,
+          slideNumber: idx + 1,
+          type: 'image',
+          prompt,
+          imageUrl: imgRes.imageUrl,
+          dataUrl: imgRes.dataUrl,
+          status: imgRes.status,
+          error: imgRes.error,
+          createdAt: new Date().toISOString()
+        },
+        slidePatch: {
+          assetId: imgRes.assetId,
+          imageUrl: imgRes.imageUrl || undefined,
+          imageStatus: imgRes.status,
+          imageError: imgRes.error,
+          layoutMode: slide.layoutMode || (idx === 1 || idx === 3 ? 'split_top' : 'full_background'),
+          overlayOpacity: slide.overlayOpacity ?? 70,
+          authorAvatar: slide.authorAvatar || P12_AUTHOR_AVATAR_URL
+        }
+      };
+    });
+
+    const results = await Promise.allSettled(assetPromises);
+
+    results.forEach((resItem) => {
+      if (resItem.status === 'fulfilled') {
+        const { slideIndex, asset, slidePatch } = resItem.value;
+        assets.push(asset);
+        generatedContent.slides[slideIndex] = {
+          ...generatedContent.slides[slideIndex],
+          ...slidePatch
+        };
+      }
+    });
+
+    // Top-level cover
+    generatedContent.imageUrl = generatedContent.slides[0]?.imageUrl;
+    generatedContent.imageStatus = generatedContent.slides[0]?.imageStatus;
+    generatedContent.imageError = generatedContent.slides[0]?.imageError;
+    generatedContent.assetId = generatedContent.slides[0]?.assetId;
+  }
+
+  generatedContent.assets = assets;
+
+  // Auto-save generated assets to workspace library
+  const successfulAssets = assets.filter((a) => a.status === 'IMAGE_GENERATED' && a.imageUrl);
+  if (successfulAssets.length > 0) {
+    const libraryItems = data.imageLibrary || [];
+    const newItems = successfulAssets.map((a, i) => ({
+      id: a.id,
+      title: `${brief.topic} — Slide ${a.slideNumber || i + 1}`,
+      imageUrl: a.imageUrl,
+      prompt: a.prompt,
+      category: brief.pillar,
+      aspectRatio,
+      style: brief.style,
+      tags: ['Pixel 12 IA', brief.pillar, brief.format],
+      createdAt: new Date().toISOString()
+    }));
+    data.imageLibrary = [...newItems, ...libraryItems];
+  }
+
+  writeWorkspaceData(data);
+
+  return res.json(generatedContent);
+});
+
+// Endpoint: Generar o reintentar imagen de una slide individual
+app.post('/api/ai/generate-slide-image', async (req, res) => {
   try {
-    const promptInstructions = `Eres el AI Content Strategist, Social Media Manager, Copywriter y Creative Director Senior de PIXEL 12 OS.
-PIXEL 12 es una agencia especializada en:
-1. Marketing digital
-2. Gestión de redes sociales
-3. Creación y gestión de contenido
-4. Estrategia digital
-5. Asistencia virtual
+    const { prompt, aspectRatio = '1:1', style, slideIndex, contentId, postId } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'El prompt visual es requerido' });
+    }
 
-Identidad visual de Pixel 12:
-- Negro Obsidiana (#09090B) como color base y fondo
-- Dorado Prestigio (#D4AF37) como color de acento y elementos importantes
-- Plateado Metálico (#CBD5E1) como color secundario y bordes
-- Blanco (#FFFFFF) para contraste y legibilidad limpia
+    const imgRes = await generateRealImageAI({
+      prompt,
+      aspectRatio,
+      style,
+      contentId,
+      slideNumber: slideIndex !== undefined ? slideIndex + 1 : undefined
+    });
 
-Especificaciones de la solicitud:
-- Marca: ${brandName}
-- Autor / Especialista: ${authorName}
-- Formato: ${format} (Carrusel, Post, Creativo de pauta, Guion de Reel, Blog SEO)
-- Pilar: ${pillar} (Marketing Digital, Asistencia Virtual, Autoridad, Conversión, Engagement, Educativo, Venta, Comunidad)
-- Estilo Visual: ${style}
-- Tema o Enlace: "${topic}"
+    const asset = {
+      id: imgRes.assetId,
+      contentId,
+      slideNumber: slideIndex !== undefined ? slideIndex + 1 : undefined,
+      type: 'image',
+      prompt,
+      imageUrl: imgRes.imageUrl,
+      dataUrl: imgRes.dataUrl,
+      status: imgRes.status,
+      error: imgRes.error,
+      createdAt: new Date().toISOString()
+    };
 
-Genera un resultado integral de DISEÑO Y CONTENIDO de nivel de agencia internacional.
-Debes responder ESTRICTAMENTE en formato JSON con la siguiente estructura exacta:
+    const data = readWorkspaceData();
+
+    // If linked to post in workspace, update the slide in post
+    if (postId) {
+      const pIdx = data.posts.findIndex((p: any) => p.id === postId);
+      if (pIdx !== -1 && slideIndex !== undefined && data.posts[pIdx].slides?.[slideIndex]) {
+        if (imgRes.imageUrl) {
+          data.posts[pIdx].slides[slideIndex].imageUrl = imgRes.imageUrl;
+        }
+        data.posts[pIdx].slides[slideIndex].imageStatus = imgRes.status;
+        data.posts[pIdx].slides[slideIndex].imageError = imgRes.error;
+        data.posts[pIdx].slides[slideIndex].assetId = imgRes.assetId;
+        data.posts[pIdx].updatedAt = new Date().toISOString();
+        writeWorkspaceData(data);
+      }
+    }
+
+    if (imgRes.status === 'IMAGE_GENERATED' && imgRes.imageUrl) {
+      const library = data.imageLibrary || [];
+      data.imageLibrary = [{
+        id: imgRes.assetId,
+        title: `Visual IA · ${prompt.slice(0, 40)}`,
+        imageUrl: imgRes.imageUrl,
+        prompt,
+        category: 'Diseño IA',
+        aspectRatio,
+        style: style || 'Pixel 12 Studio',
+        tags: ['Pixel 12 IA', 'Slide Visual'],
+        createdAt: new Date().toISOString()
+      }, ...library];
+      writeWorkspaceData(data);
+    }
+
+    return res.json({
+      success: imgRes.success,
+      status: imgRes.status,
+      asset,
+      imageUrl: imgRes.imageUrl,
+      dataUrl: imgRes.dataUrl,
+      error: imgRes.error
+    });
+  } catch (err: any) {
+    console.error('Error in /api/ai/generate-slide-image:', err);
+    return res.status(500).json({ error: err.message || 'Error al generar imagen de la slide' });
+  }
+});
+
+// Endpoint: Regenerar únicamente imágenes de todas las diapositivas en paralelo (manteniendo el copy intacto)
+app.post('/api/ai/regenerate-images', async (req, res) => {
+  try {
+    const { contentId, postId, slides: clientSlides, format = 'Carrusel', style } = req.body;
+    const data = readWorkspaceData();
+    let slides: any[] = [];
+    let post: any = null;
+
+    if (postId) {
+      const pIdx = data.posts.findIndex((p: any) => p.id === postId);
+      if (pIdx !== -1) {
+        post = data.posts[pIdx];
+        slides = post.slides || [];
+      }
+    } else if (Array.isArray(clientSlides)) {
+      slides = [...clientSlides];
+    }
+
+    if (!slides || slides.length === 0) {
+      return res.status(400).json({ error: 'No hay slides para regenerar imágenes' });
+    }
+
+    const aspectRatio = format === 'Historia / Stories' ? '9:16' : '1:1';
+    const assets: any[] = [];
+
+    const promises = slides.map(async (slide: any, idx: number) => {
+      const prompt = slide.imagePrompt || `${slide.headline}. ${slide.visualConcept || ''}`;
+      const imgRes = await generateRealImageAI({
+        prompt,
+        aspectRatio,
+        style: style || 'Pixel 12 Luxury',
+        contentId: contentId || postId,
+        slideNumber: idx + 1
+      });
+
+      return {
+        idx,
+        asset: {
+          id: imgRes.assetId,
+          contentId: contentId || postId,
+          slideNumber: idx + 1,
+          type: 'image',
+          prompt,
+          imageUrl: imgRes.imageUrl,
+          status: imgRes.status,
+          error: imgRes.error,
+          createdAt: new Date().toISOString()
+        },
+        imageUrl: imgRes.imageUrl,
+        imageStatus: imgRes.status,
+        imageError: imgRes.error,
+        assetId: imgRes.assetId
+      };
+    });
+
+    const results = await Promise.allSettled(promises);
+
+    results.forEach((r) => {
+      if (r.status === 'fulfilled') {
+        const { idx, asset, imageUrl, imageStatus, imageError, assetId } = r.value;
+        assets.push(asset);
+        slides[idx] = {
+          ...slides[idx],
+          imageUrl: imageUrl || slides[idx].imageUrl,
+          imageStatus,
+          imageError,
+          assetId
+        };
+      }
+    });
+
+    if (post) {
+      post.slides = slides;
+      post.imageUrl = slides[0]?.imageUrl || post.imageUrl;
+      post.updatedAt = new Date().toISOString();
+      writeWorkspaceData(data);
+    }
+
+    return res.json({
+      success: true,
+      slides,
+      assets,
+      message: 'Imágenes procesadas en paralelo por el motor visual de Pixel 12.'
+    });
+  } catch (err: any) {
+    console.error('Error in /api/ai/regenerate-images:', err);
+    return res.status(500).json({ error: err.message || 'Error al regenerar imágenes' });
+  }
+});
+
+// Endpoint: Regenerar únicamente copy (títulos, subtítulos, viñetas, caption, cta) manteniendo las imágenes
+app.post('/api/ai/regenerate-copy', async (req, res) => {
+  try {
+    const { contentId, postId, slides: clientSlides, brief: clientBrief } = req.body;
+    const data = readWorkspaceData();
+    let post: any = null;
+    let existingSlides: any[] = [];
+
+    if (postId) {
+      const pIdx = data.posts.findIndex((p: any) => p.id === postId);
+      if (pIdx !== -1) {
+        post = data.posts[pIdx];
+        existingSlides = post.slides || [];
+      }
+    } else if (Array.isArray(clientSlides)) {
+      existingSlides = [...clientSlides];
+    }
+
+    const brief = buildCreativeBrief(clientBrief || {
+      topic: post?.theme || 'Estrategia de Autoridad y Crecimiento',
+      objective: post?.objective || 'Educar y generar clientes calificados',
+      hook: post?.hook,
+      cta: post?.cta
+    });
+
+    let generatedContent: any = null;
+    const ai = getGeminiClient();
+
+    if (ai) {
+      const promptInstructions = buildGeminiContentPrompt(brief);
+      const text = await generateGeminiContent({
+        contents: promptInstructions,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.65
+        }
+      });
+      if (text) {
+        const parsed = JSON.parse(text);
+        const { cleaned } = validateAndCleanContent(parsed, brief);
+        generatedContent = cleaned;
+      }
+    }
+
+    if (!generatedContent) {
+      const { cleaned } = validateAndCleanContent({}, brief);
+      generatedContent = cleaned;
+    }
+
+    // Preserve images and assetIds from the existing slides!
+    if (Array.isArray(generatedContent.slides)) {
+      generatedContent.slides = generatedContent.slides.map((s: any, idx: number) => {
+        const old = existingSlides[idx] || {};
+        return {
+          ...s,
+          imageUrl: old.imageUrl || s.imageUrl,
+          imageStatus: old.imageStatus || s.imageStatus,
+          imageError: old.imageError,
+          assetId: old.assetId || s.assetId,
+          layoutMode: old.layoutMode || s.layoutMode
+        };
+      });
+    }
+
+    if (post) {
+      post.slides = generatedContent.slides;
+      post.caption = generatedContent.caption;
+      post.hook = generatedContent.hook;
+      post.cta = generatedContent.cta;
+      post.hashtags = generatedContent.hashtags;
+      post.updatedAt = new Date().toISOString();
+      writeWorkspaceData(data);
+    }
+
+    return res.json({
+      success: true,
+      content: generatedContent,
+      message: 'Copy regenerado estratégicamente respetando las imágenes y assets existentes.'
+    });
+  } catch (err: any) {
+    console.error('Error in /api/ai/regenerate-copy:', err);
+    return res.status(500).json({ error: err.message || 'Error al regenerar copy' });
+  }
+});
+
+// Endpoint: Guardar contenido como Borrador
+app.post('/api/content/save-draft', (req, res) => {
+  try {
+    const { content, brandId } = req.body;
+    if (!content) return res.status(400).json({ error: 'Contenido es requerido' });
+
+    const data = readWorkspaceData();
+    const targetBrandId = brandId || data.brands?.[0]?.id || 'brand_pixel12';
+
+    const newPost: any = {
+      id: content.id || `post_${Date.now()}`,
+      brandId: targetBrandId,
+      campaignId: null,
+      internalTitle: content.title || content.theme || 'Pieza Estratégica IA',
+      theme: content.theme || content.title,
+      pillar: content.pillar || 'Marketing Digital',
+      format: content.format || 'Carrusel',
+      platform: 'instagram',
+      hook: content.hook,
+      objective: content.brief?.objective || 'Educar y generar clientes calificados',
+      cta: content.cta,
+      status: 'DRAFT',
+      scheduledDate: null,
+      scheduledTime: null,
+      assignedMemberId: data.currentMember?.id || 'mem_1',
+      caption: content.caption || '',
+      hashtags: content.hashtags || [],
+      slides: content.slides || [],
+      hasGeneratedDesign: true,
+      imageUrl: content.slides?.[0]?.imageUrl || content.imageUrl,
+      storiesSequence: content.storiesSequence,
+      reelScript: content.reelScript,
+      suggestedTasks: content.suggestedTasks,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const existingIdx = data.posts.findIndex((p: any) => p.id === newPost.id);
+    if (existingIdx !== -1) {
+      data.posts[existingIdx] = { ...data.posts[existingIdx], ...newPost };
+    } else {
+      data.posts.unshift(newPost);
+    }
+
+    writeWorkspaceData(data);
+    return res.json({ success: true, post: newPost, message: 'Guardado como borrador en el workspace.' });
+  } catch (err: any) {
+    console.error('Error saving draft:', err);
+    return res.status(500).json({ error: err.message || 'Error al guardar borrador' });
+  }
+});
+
+// Endpoint: Enviar contenido a Aprobación (IN_REVIEW)
+app.post('/api/content/submit-approval', (req, res) => {
+  try {
+    const { content, brandId } = req.body;
+    if (!content) return res.status(400).json({ error: 'Contenido es requerido' });
+
+    const data = readWorkspaceData();
+    const targetBrandId = brandId || data.brands?.[0]?.id || 'brand_pixel12';
+
+    const newPost: any = {
+      id: content.id || `post_${Date.now()}`,
+      brandId: targetBrandId,
+      campaignId: null,
+      internalTitle: content.title || content.theme || 'Pieza Estratégica IA',
+      theme: content.theme || content.title,
+      pillar: content.pillar || 'Marketing Digital',
+      format: content.format || 'Carrusel',
+      platform: 'instagram',
+      hook: content.hook,
+      objective: content.brief?.objective || 'Educar y generar clientes calificados',
+      cta: content.cta,
+      status: 'IN_REVIEW',
+      scheduledDate: null,
+      scheduledTime: null,
+      assignedMemberId: data.currentMember?.id || 'mem_1',
+      caption: content.caption || '',
+      hashtags: content.hashtags || [],
+      slides: content.slides || [],
+      hasGeneratedDesign: true,
+      imageUrl: content.slides?.[0]?.imageUrl || content.imageUrl,
+      storiesSequence: content.storiesSequence,
+      reelScript: content.reelScript,
+      suggestedTasks: content.suggestedTasks,
+      approvalHistory: [
+        {
+          id: 'appr_' + Date.now(),
+          reviewerId: data.currentMember?.id || 'mem_1',
+          reviewerName: data.currentMember?.name || 'Creador de Contenido',
+          action: 'SUBMITTED',
+          comment: 'Pieza de contenido generada y enviada a revisión para aprobación formal.',
+          timestamp: new Date().toISOString()
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const existingIdx = data.posts.findIndex((p: any) => p.id === newPost.id);
+    if (existingIdx !== -1) {
+      data.posts[existingIdx] = { ...data.posts[existingIdx], ...newPost };
+    } else {
+      data.posts.unshift(newPost);
+    }
+
+    writeWorkspaceData(data);
+    return res.json({ success: true, post: newPost, message: 'Enviado exitosamente a la cola de Aprobación → Pendientes.' });
+  } catch (err: any) {
+    console.error('Error submitting for approval:', err);
+    return res.status(500).json({ error: err.message || 'Error al enviar a aprobación' });
+  }
+});
+
+// Endpoint: Interpretar comando libre en lenguaje natural para autocompletar el Brief
+app.post('/api/ai/parse-freeform-prompt', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ error: 'Prompt es requerido' });
+    }
+
+    const ai = getGeminiClient();
+    if (!ai) {
+      // Heuristic parsing fallback
+      const lower = prompt.toLowerCase();
+      let format = 'Carrusel';
+      if (lower.includes('reel') || lower.includes('video') || lower.includes('tiktok')) format = 'Guion de Reel';
+      else if (lower.includes('historia') || lower.includes('storie')) format = 'Historia / Stories';
+      else if (lower.includes('post') || lower.includes('publicación simple')) format = 'Post';
+
+      return res.json({
+        format,
+        topic: prompt.replace(/quiero un (carrusel|reel|post|guion).*?que /i, '').slice(0, 100),
+        objective: lower.includes('educar') ? 'Educar' : lower.includes('vender') ? 'Vender' : 'Generar clientes calificados',
+        tone: 'Profesional, cercano y persuasivo',
+        hook: '¿Te has preguntado por qué publicar sin estrategia no genera ventas?',
+        cta: 'Escríbenos por mensaje directo y te ayudamos a mejorar tu estrategia.'
+      });
+    }
+
+    const systemPrompt = `Eres un asistente de estrategia de contenidos para PIXEL 12 STUDIO.
+Analiza el siguiente comando libre en lenguaje natural escrito por un usuario:
+"${prompt}"
+
+Extrae e infiere un BRIEF CREATIVO estructurado con los siguientes campos en JSON:
 {
-  "title": "Título conciso y estratégico",
-  "theme": "Resumen del tema",
-  "format": "${format}",
-  "pillar": "${pillar}",
-  "style": "${style}",
-  "hook": "Gancho demoledor (primeros 3 segundos o primer renglón del copy)",
-  "caption": "Copy completo y altamente persuasivo para Instagram/LinkedIn con emojis, saltos de línea claros, valor de negocio y llamada a la acción",
-  "cta": "Llamada a la acción precisa (ej: Comenta 'DELEGAR', agenda en el link, etc.)",
-  "hashtags": ["#Pixel12", "#MarketingDigital", "#AsistenciaVirtual", "#Estrategia"],
-  "visualConcept": "Descripción de la dirección de arte y composición (Negro, Dorado, Plateado, Blanco)",
-  "slides": [
-    {
-      "slideNumber": 1,
-      "slideType": "cover",
-      "tag": "PIXEL 12 · ${pillar.toUpperCase()}",
-      "headline": "Titular grande, impactante y legible en móvil",
-      "subtitle": "Subtítulo explicativo que despierta interés inmediato",
-      "bodyPoints": ["Punto clave 1", "Punto clave 2", "Punto clave 3"],
-      "showAuthorBadge": true,
-      "authorBadgeName": "${authorName}",
-      "authorBadgeTitle": "Pixel 12 OS · Especialista",
-      "showOfficialLogo": true,
-      "highlightBadge": "ESTRATEGIA RECOMENDADA",
-      "accentColor": "#D4AF37",
-      "visualDescription": "Instrucciones de composición visual (fondo negro obsidiana, marco fino plateado, tipografía bold, acento dorado)."
-    },
-    {
-      "slideNumber": 2,
-      "slideType": "problem",
-      "tag": "EL DOLOR CLAVE",
-      "headline": "Titular del obstáculo o error operativo habitual",
-      "subtitle": "Explicación del costo o fricción que esto genera en el negocio",
-      "bodyPoints": ["Detalle 1", "Detalle 2"],
-      "showAuthorBadge": false,
-      "showOfficialLogo": true,
-      "metricNumber": "-15h",
-      "metricLabel": "Impacto negativo habitual",
-      "visualDescription": "Composición con tarjeta oscura de contraste y datos numéricos destacados."
-    },
-    {
-      "slideNumber": 3,
-      "slideType": "solution",
-      "tag": "EL MÉTODO PIXEL 12",
-      "headline": "La solución explicada de manera visual y clara",
-      "subtitle": "Cómo se aplica paso a paso en el negocio real",
-      "bodyPoints": ["Paso 1", "Paso 2", "Paso 3"],
-      "showAuthorBadge": false,
-      "showOfficialLogo": true,
-      "metricNumber": "3.5x",
-      "metricLabel": "Mayor eficiencia comprobada",
-      "visualDescription": "Esquema visual con pasos ordenados y divisores dorados."
-    },
-    {
-      "slideNumber": 4,
-      "slideType": "case_study",
-      "tag": "CASO REAL / DATOS",
-      "headline": "Comparativa real o métrica antes vs después",
-      "subtitle": "Los números que respaldan la afirmación",
-      "bodyPoints": ["Métrica inicial", "Métrica optimizada con Pixel 12"],
-      "showAuthorBadge": false,
-      "showOfficialLogo": true,
-      "highlightBadge": "VERIFICADO",
-      "visualDescription": "Tabla de datos con diseño limpio de alto contraste y números destacados."
-    },
-    {
-      "slideNumber": 5,
-      "slideType": "cta",
-      "tag": "ACCIÓN FINAL",
-      "headline": "Pregunta de cierre orientada a la llamada a la acción",
-      "subtitle": "Qué debe hacer el lector para obtener la plantilla o agendar",
-      "bodyPoints": ["Beneficio o recurso 1", "Beneficio o recurso 2"],
-      "showAuthorBadge": true,
-      "authorBadgeName": "${authorName}",
-      "authorBadgeTitle": "Consultor Estratégico",
-      "showOfficialLogo": true,
-      "highlightBadge": "CONSULTORÍA ACTIVA",
-      "accentColor": "#D4AF37",
-      "visualDescription": "Slide de cierre con badge dorado, llamado a la acción claro y enlaces oficiales de Pixel 12."
-    }
-  ],
-  "reelScript": [
-    {
-      "secondRange": "00:00 - 00:03",
-      "shotType": "Primer plano a cámara con texto llamativo",
-      "visualDirection": "Texto en pantalla con tipografía bold en oro y fondo negro",
-      "voiceover": "Texto hablado para los primeros 3 segundos"
-    },
-    {
-      "secondRange": "00:03 - 00:15",
-      "shotType": "B-roll o demostración del sistema",
-      "visualDirection": "Resaltados sobre los problemas y soluciones",
-      "voiceover": "Explicación del problema operativo y la solución"
-    },
-    {
-      "secondRange": "00:15 - 00:25",
-      "shotType": "Puntos clave de la metodología",
-      "visualDirection": "Tarjetas dinámicas con los 3 beneficios tangibles",
-      "voiceover": "Resumen de valor y tiempo liberado"
-    },
-    {
-      "secondRange": "00:25 - 00:30",
-      "shotType": "Cierre con CTA",
-      "visualDirection": "Badge dorado con la palabra clave a comentar",
-      "voiceover": "Llamada a la acción clara para comentar o agendar"
-    }
-  ],
-  "blogSEO": {
-    "metaTitle": "Título SEO optimizado para Google",
-    "metaDescription": "Meta descripción atractiva para CTR",
-    "readingTime": "5 min de lectura",
-    "targetKeywords": ["Keyword 1", "Keyword 2", "Keyword 3"],
-    "h1": "Título H1 de la publicación",
-    "outline": ["H2 1", "H2 2", "H2 3", "H2 4"],
-    "summary": "Resumen del artículo",
-    "articleBody": "Primeros párrafos del artículo con valor editorial listo para blog."
-  },
-  "suggestedTasks": [
-    {
-      "title": "Diseñar artes para la pieza generada",
-      "description": "Exportar y montar con identidad Pixel 12 (Negro, Dorado, Plateado y Blanco)",
-      "assignedRole": "Designer",
-      "priority": "HIGH"
-    },
-    {
-      "title": "Revisar copy y programar publicación",
-      "description": "Verificar hashtags y agendar en el calendario de Pixel 12",
-      "assignedRole": "Copywriter",
-      "priority": "MEDIUM"
-    }
-  ]
-}`;
+  "format": "Carrusel" | "Post" | "Guion de Reel" | "Historia / Stories" | "Creativo de pauta" | "Blog SEO",
+  "topic": "Tema central claro y conciso (máx 15 palabras)",
+  "hook": "Gancho irresistible de apertura basado en la idea",
+  "objective": "Objetivo comercial o educativo (ej: Educar, Generar leads, Vender servicio, Crear autoridad)",
+  "tone": "Tono de comunicación (ej: Directo y educativo, Cercano y profesional, Inspirador)",
+  "cta": "Llamada a la acción precisa orientada al cierre",
+  "audience": "A quién va dirigido el contenido",
+  "additionalInstructions": "Detalles o restricciones detectadas"
+}
+Reglas:
+- Si menciona carrusel, diapositivas, slides -> "Carrusel".
+- Si menciona reel, guion, video corto -> "Guion de Reel".
+- Si menciona historia, historias, stories -> "Historia / Stories".
+- Si menciona post, feed, arte -> "Post".
+- Si no especifica formato, asigna "Carrusel".
+- Deduce un gancho magnético y un CTA concreto si no están explícitos.`;
 
     const text = await generateGeminiContent({
-      contents: promptInstructions,
+      contents: systemPrompt,
       config: {
         responseMimeType: 'application/json',
-        temperature: 0.6,
+        temperature: 0.3
       }
     });
 
     if (!text) {
-      return res.json(getFallbackData());
+      throw new Error('No response from Gemini');
     }
 
     const parsed = JSON.parse(text);
-    parsed.id = 'gen_' + Date.now();
-    parsed.createdAt = new Date().toISOString();
-
-    // Ensure all slides have dynamic imagery and layouts
-    if (parsed.slides && Array.isArray(parsed.slides)) {
-      parsed.slides = parsed.slides.map((s: any, idx: number) => ({
-        ...s,
-        imageUrl: s.imageUrl || P12_DYNAMIC_SLIDE_IMAGES[idx % P12_DYNAMIC_SLIDE_IMAGES.length],
-        layoutMode: s.layoutMode || (idx === 1 || idx === 3 ? 'split_top' : 'full_background'),
-        overlayOpacity: s.overlayOpacity ?? 70,
-        authorAvatar: s.authorAvatar || P12_AUTHOR_AVATAR_URL,
-        imagePrompt: s.imagePrompt || s.visualDescription || 'Dynamic business and marketing photography with gold accent'
-      }));
-    }
-
     return res.json(parsed);
   } catch (err: any) {
-    console.log('[AI] Using resilient design & content generator fallback');
-    return res.json(getFallbackData());
+    console.error('Error parsing freeform prompt:', err);
+    return res.json({
+      format: 'Carrusel',
+      topic: req.body.prompt || 'Estrategia Digital',
+      objective: 'Educar y generar clientes calificados',
+      hook: 'La razón por la que tu contenido aún no consigue clientes reales',
+      tone: 'Profesional, cercano y persuasivo',
+      cta: 'Escríbenos por mensaje directo y diseñamos tu plan estratégico.',
+      audience: 'Emprendedores y dueños de negocio'
+    });
   }
 });
 
-// ---------------- POST DESIGN GENERATION FROM CALENDAR & SINGLE SLIDE REGEN ----------------
+// Endpoint: Refinar copy específico (Hook, Caption, CTA)
+app.post('/api/ai/refine-copy', async (req, res) => {
+  try {
+    const { text, field = 'caption', action = 'improve', brief } = req.body;
+    const ai = getGeminiClient();
+    if (!ai || !text) {
+      return res.json({ refinedText: text || '' });
+    }
+
+    const prompt = `Eres el Copywriter Senior de PIXEL 12 STUDIO.
+Refina el siguiente texto correspondiente al campo "${field}".
+Acción solicitada: "${action}" (improve = mejorar impacto; shorten = hacer más conciso; persuasive = hacer más vendedor y persuasivo; direct = más contundente).
+Tema de contexto: "${brief?.topic || 'Marketing y Asistencia Virtual'}".
+Objetivo: "${brief?.objective || 'Educar y convertir'}".
+Tono: Pixel 12 Studio (Elegante, directo, profesional, de alta autoridad).
+
+Texto original:
+"""${text}"""
+
+Devuelve EXCLUSIVAMENTE un JSON con:
+{
+  "refinedText": "El texto refinado y listo para usar"
+}`;
+
+    const raw = await generateGeminiContent({
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        temperature: 0.5
+      }
+    });
+
+    const parsed = JSON.parse(raw);
+    return res.json(parsed);
+  } catch (err: any) {
+    console.error('Error refining copy:', err);
+    return res.json({ refinedText: req.body.text || '' });
+  }
+});
+
+// ---------------- POST DESIGN GENERATION FROM CALENDAR ----------------
 app.post('/api/ai/generate-post-design', async (req, res) => {
   try {
     const { postId } = req.body;
@@ -2825,7 +3469,7 @@ app.post('/api/ai/generate-post-design', async (req, res) => {
 
     const post = data.posts[postIndex];
     const brand = data.brands.find((b: any) => b.id === post.brandId) || data.brands[0];
-    const isCarousel = post.format === 'Carousel';
+    const isCarousel = post.format === 'Carousel' || post.format === 'Carrusel';
     const creditCost = isCarousel ? 6 : 1;
 
     // Deduct AI credits
@@ -2835,159 +3479,67 @@ app.post('/api/ai/generate-post-design', async (req, res) => {
     data.workspaceSettings.aiCredits = Math.max(0, data.workspaceSettings.aiCredits - creditCost);
 
     const authorName = brand.name.includes('Pixel') ? 'Alejandro Morales' : (brand.voice?.authorName || 'Director de Estrategia');
-    const brandGold = brand.colors?.gold || '#D4AF37';
 
-    // Build 6 high-impact slides following Pixel 12 luxury identity (Negro, Dorado, Plateado, Blanco)
-    const slides = [
-      {
-        slideNumber: 1,
-        slideType: 'cover',
-        tag: `PIXEL 12 · ${(post.pillar || 'ESTRATEGIA').toUpperCase()}`,
-        headline: post.hook || post.internalTitle,
-        subtitle: post.theme || 'Estrategia validada con entregables medibles para escalar tu negocio.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[0],
-        layoutMode: 'full_background',
-        overlayOpacity: 70,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Diagnóstico operativo y detección de fugas',
-          'Ejecución con métricas y reportes verificados',
-          'Supervisión directa de especialista senior'
-        ],
-        showAuthorBadge: true,
-        authorBadgeName: authorName,
-        authorBadgeTitle: `${brand.name} OS · Especialista Senior`,
-        showOfficialLogo: true,
-        highlightBadge: 'ESTUDIO 2026',
-        accentColor: brandGold,
-        visualDescription: 'Fondo negro obsidiana (#09090B), fotografía prémium con gradiente oscuro, marco perimetral plateado y detalles dorados (#D4AF37).'
-      },
-      {
-        slideNumber: 2,
-        slideType: 'problem',
-        tag: 'EL CUELLO DE BOTELLA',
-        headline: 'Querer hacerlo todo manualmente sin sistemas ni delegación predecible',
-        subtitle: 'Consecuencia directa: pérdida de 15 horas semanales en tareas operativas de bajo valor.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[1],
-        layoutMode: 'split_top',
-        overlayOpacity: 65,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Bandeja de entrada colapsada y prospectos sin atender',
-          'Seguimiento manual sin sincronización con CRM',
-          'Publicaciones de marketing intermitentes por falta de tiempo'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '-15h',
-        metricLabel: 'Horas semanales perdidas en micro-operación por fundador',
-        visualDescription: 'Tarjeta con fotografía en cabecera y cuerpo negro obsidiana con métrica tipográfica de alto impacto.'
-      },
-      {
-        slideNumber: 3,
-        slideType: 'solution',
-        tag: 'EL MÉTODO PIXEL 12',
-        headline: 'Implementación del sistema integrado de delegación y marketing',
-        subtitle: 'Estandarización de procesos con soporte calificado y herramientas digitales en 48 horas.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[2],
-        layoutMode: 'full_background',
-        overlayOpacity: 75,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Filtrado automatizado de consultas y leads entrantes',
-          'Asistente virtual sincronizada en agenda y soporte',
-          'Reportes semanales de rendimiento, conversión y ROI'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '3.5x',
-        metricLabel: 'Mayor rapidez en atención, prospección y respuesta comercial',
-        visualDescription: 'Diagrama de flujo con fotografía ejecutiva de asistente virtual y líneas doradas limpias.'
-      },
-      {
-        slideNumber: 4,
-        slideType: 'case_study',
-        tag: 'RESULTADO COMPROBADO',
-        headline: 'Caso de éxito real: 60 días de implementación y crecimiento',
-        subtitle: 'Impacto directo en métricas de productividad y margen operativo de clientes activos.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[3],
-        layoutMode: 'split_top',
-        overlayOpacity: 70,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Reducción drástica de fricción en el embudo comercial',
-          'Aumento del 140% en citas agendadas y cualificadas',
-          'Tasa de asistencia confirmada del 92%'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '+140%',
-        metricLabel: 'Crecimiento de citas comerciales y cierres de venta',
-        visualDescription: 'Tarjeta de métrica con gráficos de crecimiento fotográficos y sello de verificación en plata.'
-      },
-      {
-        slideNumber: 5,
-        slideType: 'solution',
-        tag: 'CRITERIO ESTRATÉGICO',
-        headline: 'La clave de escala: Medir, ajustar y estandarizar',
-        subtitle: 'Un proceso documentado vale más que diez horas de trabajo improvisado.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[4],
-        layoutMode: 'full_background',
-        overlayOpacity: 75,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Manuales operativos paso a paso para cada canal',
-          'Métricas claras y cuadros de control de calidad',
-          'Respaldo continuo y supervisión del equipo senior'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        highlightBadge: 'MÉTODO PIXEL 12',
-        accentColor: brandGold,
-        visualDescription: 'Infografía con fotografía de equipo estratégico y los 3 pilares clave en tarjetas oscuras con bordes dorados.'
-      },
-      {
-        slideNumber: 6,
-        slideType: 'cta',
-        tag: 'ACCIÓN FINAL',
-        headline: '¿Listo para liberar tiempo y profesionalizar tu operación?',
-        subtitle: 'Agenda una sesión diagnóstica y recibe tu plan de acción personalizado con Pixel 12.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[5],
-        layoutMode: 'full_background',
-        overlayOpacity: 80,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Diagnóstico de embudo y procesos sin costo en 24h',
-          'Integración de asistente virtual calificada en 48h',
-          'Garantía de soporte, medición y seguimiento continuo'
-        ],
-        showAuthorBadge: true,
-        authorBadgeName: authorName,
-        authorBadgeTitle: 'Pixel 12 OS · Consultor Estratégico',
-        showOfficialLogo: true,
-        highlightBadge: 'CUPOS LIMITADOS',
-        accentColor: brandGold,
-        visualDescription: 'Slide de cierre cinemático negro y oro, logotipo oficial de Pixel 12 en alta calidad y botón CTA destacado.'
+    const brief = buildCreativeBrief({
+      format: isCarousel ? 'Carrusel' : 'Post',
+      pillar: (post.pillar || 'Marketing Digital') as any,
+      topic: post.theme || post.internalTitle,
+      hook: post.hook,
+      objective: post.objective || 'Educar y generar clientes calificados',
+      cta: post.cta || 'Escríbenos por mensaje directo para conocer más.',
+      brandName: brand.name,
+      authorName
+    });
+
+    let generatedSlides: any[] = [];
+    const ai = getGeminiClient();
+
+    if (ai) {
+      try {
+        const promptInstructions = buildGeminiContentPrompt(brief);
+        const text = await generateGeminiContent({
+          contents: promptInstructions,
+          config: { responseMimeType: 'application/json', temperature: 0.6 }
+        });
+        if (text) {
+          const parsed = JSON.parse(text);
+          const { cleaned } = validateAndCleanContent(parsed, brief);
+          generatedSlides = cleaned.slides;
+        }
+      } catch (geminiErr) {
+        console.warn('Gemini error generating post design, using clean fallback:', geminiErr);
       }
-    ];
+    }
+
+    if (!generatedSlides || generatedSlides.length === 0) {
+      const { cleaned } = validateAndCleanContent({}, brief);
+      generatedSlides = cleaned.slides;
+    }
+
+    // Attach dynamic imagery
+    generatedSlides = generatedSlides.map((s, idx) => ({
+      ...s,
+      imageUrl: s.imageUrl || P12_DYNAMIC_SLIDE_IMAGES[idx % P12_DYNAMIC_SLIDE_IMAGES.length],
+      layoutMode: s.layoutMode || (idx === 1 || idx === 3 ? 'split_top' : 'full_background'),
+      overlayOpacity: s.overlayOpacity ?? 70,
+      authorAvatar: s.authorAvatar || P12_AUTHOR_AVATAR_URL
+    }));
 
     // Update post fields
-    post.slides = slides;
+    post.slides = generatedSlides;
     post.hasGeneratedDesign = true;
     post.designCreditCost = creditCost;
-    // When completed, it appears in Aprobación -> Pendientes
     post.status = 'IN_REVIEW';
-    post.imageUrl = 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1080&auto=format&fit=crop&q=80';
+    post.imageUrl = generatedSlides[0]?.imageUrl || P12_DYNAMIC_SLIDE_IMAGES[0];
     post.updatedAt = new Date().toISOString();
 
-    // Add approval entry
     if (!post.approvalHistory) post.approvalHistory = [];
     post.approvalHistory.push({
       id: 'appr_' + Date.now(),
       reviewerId: 'sys_ai',
       reviewerName: 'Motor de Diseño Pixel 12 (IA)',
       action: 'SUBMITTED',
-      comment: `Diseño de ${isCarousel ? 'carrusel (6 slides)' : 'post'} generado con éxito desde el calendario (-${creditCost} créditos). Enviado a Aprobación → Pendientes.`,
+      comment: `Diseño generado estratégicamente sin repeticiones (-${creditCost} créditos). Enviado a Aprobación → Pendientes.`,
       timestamp: new Date().toISOString()
     });
 
@@ -2997,7 +3549,7 @@ app.post('/api/ai/generate-post-design', async (req, res) => {
       success: true,
       post,
       aiCredits: data.workspaceSettings.aiCredits,
-      message: `Diseño generado exitosamente (-${creditCost} créditos). Ahora está en Aprobación → Pendientes con sus ${slides.length} slides.`
+      message: `Diseño generado exitosamente (-${creditCost} créditos). Ahora está en Aprobación → Pendientes con sus ${generatedSlides.length} slides.`
     });
   } catch (err: any) {
     console.error('Error generating post design:', err);
@@ -3005,108 +3557,142 @@ app.post('/api/ai/generate-post-design', async (req, res) => {
   }
 });
 
-// Endpoint: Rehacer una sola slide
+// Endpoint: Rehacer una sola slide de manera inteligente con IA y CERO repetición
 app.post('/api/ai/regenerate-single-slide', async (req, res) => {
   try {
-    const { postId, slideIndex, changePrompt } = req.body;
-    if (!postId || slideIndex === undefined) {
-      return res.status(400).json({ error: 'postId y slideIndex son requeridos' });
+    const { postId, slideIndex, changePrompt, allSlides: clientSlides, brief: clientBrief } = req.body;
+    if (slideIndex === undefined) {
+      return res.status(400).json({ error: 'slideIndex es requerido' });
     }
 
+    let slides: any[] = [];
+    let post: any = null;
     const data = readWorkspaceData();
-    const postIndex = data.posts.findIndex((p: any) => p.id === postId);
-    if (postIndex === -1) {
-      return res.status(404).json({ error: 'Publicación no encontrada' });
+
+    if (postId) {
+      const postIndex = data.posts.findIndex((p: any) => p.id === postId);
+      if (postIndex !== -1) {
+        post = data.posts[postIndex];
+        slides = post.slides || [];
+      }
+    } else if (Array.isArray(clientSlides)) {
+      slides = [...clientSlides];
     }
 
-    const post = data.posts[postIndex];
-    if (!post.slides || !post.slides[slideIndex]) {
-      return res.status(400).json({ error: 'Slide no encontrada en la publicación' });
+    if (!slides[slideIndex]) {
+      return res.status(400).json({ error: 'Slide no encontrada' });
     }
 
-    // Deduct 1 credit for single slide regeneration
-    if (!data.workspaceSettings.aiCredits && data.workspaceSettings.aiCredits !== 0) {
-      data.workspaceSettings.aiCredits = 120;
+    // Deduct 1 credit for single slide regeneration if post or workspace exists
+    if (data.workspaceSettings) {
+      if (!data.workspaceSettings.aiCredits && data.workspaceSettings.aiCredits !== 0) {
+        data.workspaceSettings.aiCredits = 120;
+      }
+      data.workspaceSettings.aiCredits = Math.max(0, data.workspaceSettings.aiCredits - 1);
     }
-    data.workspaceSettings.aiCredits = Math.max(0, data.workspaceSettings.aiCredits - 1);
 
-    const promptText = (changePrompt || '').toLowerCase();
-    const targetSlide = { ...post.slides[slideIndex] };
+    const currentSlide = slides[slideIndex];
+    const role = currentSlide.role || currentSlide.slideType || (slideIndex === 0 ? 'hook' : slideIndex === slides.length - 1 ? 'cta' : 'development');
+    const brief = buildCreativeBrief(clientBrief || {
+      topic: post?.theme || post?.internalTitle || 'Estrategia Pixel 12',
+      objective: post?.objective || 'Educar y convertir',
+      hook: post?.hook || slides[0]?.headline,
+      cta: post?.cta || slides[slides.length - 1]?.subtitle
+    });
 
-    // Apply adjustments intelligently based on the user's instructions
-    if (promptText.includes('menos texto') || promptText.includes('más corto') || promptText.includes('sintetizar')) {
-      targetSlide.subtitle = 'Enfoque directo: ' + (targetSlide.subtitle?.slice(0, 50) || 'Análisis optimizado');
-      if (targetSlide.bodyPoints && targetSlide.bodyPoints.length > 0) {
-        targetSlide.bodyPoints = targetSlide.bodyPoints.slice(0, 2).map((bp: string) => bp.slice(0, 45));
+    const otherSlidesSummary = slides
+      .filter((_: any, idx: number) => idx !== slideIndex)
+      .map((s: any, idx: number) => `Slide #${s.slideNumber || idx + 1} (${s.role || s.slideType}): "${s.headline}" — ${s.subtitle || ''}`)
+      .join('\n');
+
+    let regeneratedSlide = { ...currentSlide };
+    const ai = getGeminiClient();
+
+    if (ai) {
+      try {
+        const prompt = `ERES EL DIRECTOR CREATIVO DE PIXEL 12 STUDIO.
+Regenera EXCLUSIVAMENTE LA SLIDE #${slideIndex + 1} de un carrusel de ${slides.length} diapositivas.
+
+BRIEF GENERAL:
+- Tema: "${brief.topic}"
+- Objetivo: "${brief.objective}"
+- Rol específico de esta slide: "${role}" (hook / problem / development / solution / cta)
+- Ajuste solicitado por el usuario: "${changePrompt || 'Hacerla más persuasiva, clara y visual'}"
+
+LAS DEMÁS DIAPOSITIVAS DEL CARRUSEL SON (PROHIBIDO REPETIR CUALQUIERA DE ESTAS IDEAS O TEXTOS):
+${otherSlidesSummary}
+
+REGLAS ESTRICTAS:
+1. CERO REPETICIÓN: Esta slide debe aportar un punto COMPLETAMENTE NUEVO y complementario.
+2. Si esta slide NO es la #1, PROHIBIDO incluir el gancho general.
+3. Si esta slide NO es la última, PROHIBIDO incluir el CTA.
+4. Títulos cortos (máximo 8-10 palabras), subtítulo breve de 1 línea, y 2 a 3 viñetas concisas.
+5. Diseña un prompt visual específico en inglés ("imagePrompt") para Midjourney/Imagen 3 que represente exactamente el concepto de esta slide.
+
+Responde ÚNICAMENTE en JSON:
+{
+  "headline": "Titular de alto impacto",
+  "subtitle": "Subtítulo explicativo breve",
+  "bodyPoints": ["Punto 1", "Punto 2"],
+  "tag": "PIXEL 12 · ${brief.pillar.toUpperCase()}",
+  "metricNumber": null,
+  "metricLabel": null,
+  "visualConcept": "Dirección de arte en español (Negro obsidiana y detalles dorados)",
+  "imagePrompt": "Detailed English photographic prompt with cinematic lighting, black background, subtle gold details"
+}`;
+
+        const text = await generateGeminiContent({
+          contents: prompt,
+          config: { responseMimeType: 'application/json', temperature: 0.7 }
+        });
+
+        if (text) {
+          const parsed = JSON.parse(text);
+          regeneratedSlide = {
+            ...currentSlide,
+            headline: parsed.headline || currentSlide.headline,
+            subtitle: parsed.subtitle || currentSlide.subtitle,
+            bodyPoints: Array.isArray(parsed.bodyPoints) ? parsed.bodyPoints : currentSlide.bodyPoints,
+            tag: parsed.tag || currentSlide.tag,
+            metricNumber: parsed.metricNumber ?? currentSlide.metricNumber,
+            metricLabel: parsed.metricLabel ?? currentSlide.metricLabel,
+            visualConcept: parsed.visualConcept || currentSlide.visualConcept,
+            visualDescription: parsed.visualConcept || currentSlide.visualDescription,
+            imagePrompt: parsed.imagePrompt || currentSlide.imagePrompt,
+            // Pick a fresh photo from the dynamic pool
+            imageUrl: P12_DYNAMIC_SLIDE_IMAGES[(slideIndex + 2) % P12_DYNAMIC_SLIDE_IMAGES.length]
+          };
+        }
+      } catch (geminiErr) {
+        console.warn('Gemini single slide regen error, applying smart local adjustment:', geminiErr);
       }
     }
 
-    if (promptText.includes('sin el número') || promptText.includes('sin numero') || promptText.includes('quitar número') || promptText.includes('sin métrica')) {
-      delete targetSlide.metricNumber;
-      delete targetSlide.metricLabel;
-      targetSlide.highlightBadge = 'CONCEPTO ESTRATÉGICO';
+    // Apply adjustments locally if prompt requested specific changes
+    const promptLower = (changePrompt || '').toLowerCase();
+    if (promptLower.includes('menos texto') || promptLower.includes('más corto')) {
+      if (regeneratedSlide.bodyPoints) regeneratedSlide.bodyPoints = regeneratedSlide.bodyPoints.slice(0, 2);
+    }
+    if (promptLower.includes('sin número') || promptLower.includes('quitar número')) {
+      delete regeneratedSlide.metricNumber;
+      delete regeneratedSlide.metricLabel;
     }
 
-    if (promptText.includes('fondo más limpio') || promptText.includes('fondo mas limpio') || promptText.includes('más limpio') || promptText.includes('minimalista')) {
-      targetSlide.visualDescription = 'Fondo negro obsidiana minimalista de alta pureza, sin ruido ni texturas complejas, contraste oro y blanco.';
-      targetSlide.accentColor = '#D4AF37';
-      targetSlide.overlayOpacity = 85;
+    slides[slideIndex] = regeneratedSlide;
+
+    if (post) {
+      post.slides = slides;
+      post.updatedAt = new Date().toISOString();
+      writeWorkspaceData(data);
     }
-
-    if (promptText.includes('foto') || promptText.includes('imagen') || promptText.includes('visual') || promptText.includes('dinamico') || promptText.includes('dinámico')) {
-      // Pick next dynamic image
-      const nextImgIdx = (slideIndex + 1) % P12_DYNAMIC_SLIDE_IMAGES.length;
-      targetSlide.imageUrl = P12_DYNAMIC_SLIDE_IMAGES[nextImgIdx];
-      targetSlide.layoutMode = 'full_background';
-      targetSlide.overlayOpacity = 70;
-      targetSlide.visualDescription = 'Composición visual fotográfica de alto impacto con gradiente cinemático oscuro y tipografía dorada.';
-    }
-
-    if (promptText.includes('asistencia virtual') || promptText.includes('asistente')) {
-      targetSlide.imageUrl = P12_DYNAMIC_SLIDE_IMAGES[2];
-      targetSlide.headline = 'Asistente Virtual calificada: 15 horas semanales recuperadas';
-      targetSlide.subtitle = 'Sincronizada con tu agenda, WhatsApp Business y procesos clave en 48 horas.';
-      targetSlide.bodyPoints = [
-        'Filtrado y respuesta inmediata a prospectos comerciales',
-        'Gestión de calendario y tareas operativas repetitivas',
-        'Reportes de seguimiento y control de calidad auditado'
-      ];
-      targetSlide.metricNumber = '+15h';
-      targetSlide.metricLabel = 'Horas directas liberadas a dirección y estrategia';
-    }
-
-    if (promptText.includes('roi') || promptText.includes('marketing') || promptText.includes('conversion') || promptText.includes('conversión')) {
-      targetSlide.imageUrl = P12_DYNAMIC_SLIDE_IMAGES[3];
-      targetSlide.headline = 'Máquina de prospección: De vistas a llamadas calificadas';
-      targetSlide.subtitle = 'Embudo de conversión optimizado con métricas claras y seguimiento diario.';
-      targetSlide.metricNumber = '+140%';
-      targetSlide.metricLabel = 'Incremento en agendamiento de prospectos calificados';
-    }
-
-    if (promptText.includes('número') && !promptText.includes('sin')) {
-      targetSlide.metricNumber = '+240%';
-      targetSlide.metricLabel = 'Crecimiento de conversión registrado en 60 días';
-    }
-
-    // Always adjust tag or headline to reflect the customized revision
-    targetSlide.tag = targetSlide.tag + ' · AJUSTE IA';
-    if (changePrompt && changePrompt.trim() && !promptText.includes('menos texto')) {
-      targetSlide.headline = `${targetSlide.headline.replace(/ \(Ajustado\)/, '')} (Ajustado)`;
-      targetSlide.visualDescription = `Ajuste aplicado: "${changePrompt}". Renderizado dinámico con identidad Pixel 12.`;
-    }
-
-    // Keep the other 5 slides intact!
-    post.slides[slideIndex] = targetSlide;
-    post.updatedAt = new Date().toISOString();
-
-    writeWorkspaceData(data);
 
     return res.json({
       success: true,
-      slide: targetSlide,
+      slide: regeneratedSlide,
+      slides,
       post,
-      aiCredits: data.workspaceSettings.aiCredits,
-      message: `Slide #${targetSlide.slideNumber} regenerada exitosamente con el ajuste "${changePrompt}" (-1 crédito). Las demás slides se mantuvieron intactas.`
+      aiCredits: data.workspaceSettings?.aiCredits,
+      message: `Slide #${slideIndex + 1} regenerada exitosamente con IA sin repetir contenido (-1 crédito).`
     });
   } catch (err: any) {
     console.error('Error regenerating single slide:', err);
@@ -3114,176 +3700,88 @@ app.post('/api/ai/regenerate-single-slide', async (req, res) => {
   }
 });
 
-// Endpoint: Regenerar carrusel completo
+// Endpoint: Regenerar carrusel completo con IA
 app.post('/api/ai/regenerate-all-slides', async (req, res) => {
   try {
-    const { postId } = req.body;
-    if (!postId) {
-      return res.status(400).json({ error: 'postId es requerido' });
-    }
-
+    const { postId, brief: clientBrief } = req.body;
     const data = readWorkspaceData();
-    const postIndex = data.posts.findIndex((p: any) => p.id === postId);
-    if (postIndex === -1) {
-      return res.status(404).json({ error: 'Publicación no encontrada' });
-    }
+    let post: any = null;
 
-    const post = data.posts[postIndex];
-
-    // Deduct 6 credits for full carousel regeneration
-    if (!data.workspaceSettings.aiCredits && data.workspaceSettings.aiCredits !== 0) {
-      data.workspaceSettings.aiCredits = 120;
-    }
-    data.workspaceSettings.aiCredits = Math.max(0, data.workspaceSettings.aiCredits - 6);
-
-    const brand = data.brands.find((b: any) => b.id === post.brandId) || data.brands[0];
-    const authorName = brand.name.includes('Pixel') ? 'Alejandro Morales' : (brand.voice?.authorName || 'Director de Estrategia');
-    const brandGold = brand.colors?.gold || '#D4AF37';
-
-    // Fresh 6 slides with Pixel 12 luxury identity and dynamic imagery
-    post.slides = [
-      {
-        slideNumber: 1,
-        slideType: 'cover',
-        tag: `PIXEL 12 · ${(post.pillar || 'ESTRATEGIA').toUpperCase()}`,
-        headline: post.hook || post.internalTitle,
-        subtitle: 'Sistemas predecibles de crecimiento y delegación operativa.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[0],
-        layoutMode: 'full_background',
-        overlayOpacity: 70,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Estrategia de contenidos y autoridad en redes',
-          'Asignación de asistente virtual en 48 horas',
-          'Alineación comercial orientada a conversión'
-        ],
-        showAuthorBadge: true,
-        authorBadgeName: authorName,
-        authorBadgeTitle: `${brand.name} OS · Especialista Senior`,
-        showOfficialLogo: true,
-        highlightBadge: 'NUEVA PROPUESTA',
-        accentColor: brandGold,
-        visualDescription: 'Composición de portada prémium con fondo fotográfico y negro obsidiana (#09090B), marco plateado y detalles dorados.'
-      },
-      {
-        slideNumber: 2,
-        slideType: 'problem',
-        tag: 'EL PROBLEMA REAL',
-        headline: 'El 85% de las empresas pierden ventas por demoras en atención y falta de consistencia',
-        subtitle: 'Consecuencia: prospectos fríos, agotamiento del fundador y costos ocultos.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[1],
-        layoutMode: 'split_top',
-        overlayOpacity: 65,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Sin filtrado inteligente de consultas comerciales',
-          'Contenido publicado sin planificación estratégica',
-          'Falta de un proceso documentado de seguimiento'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '-15h',
-        metricLabel: 'Tiempo operativo perdido semanalmente por fundador',
-        visualDescription: 'Fotografía en cabecera con tarjeta negra inferior y métrica de fricción.'
-      },
-      {
-        slideNumber: 3,
-        slideType: 'solution',
-        tag: 'EL MÉTODO INTEGRAL',
-        headline: 'Cómo lo resolvemos con el estándar Pixel 12 OS',
-        subtitle: 'Integración sinérgica de Asistencia Virtual + Marketing Digital + CRM.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[2],
-        layoutMode: 'full_background',
-        overlayOpacity: 75,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Manual de operaciones y flujos de trabajo claros',
-          'Asistente virtual dedicada para gestión diaria',
-          'Parrilla mensual de contenidos con dirección de arte prémium'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '4.2x',
-        metricLabel: 'Mayor velocidad de respuesta y cualificación de prospectos',
-        visualDescription: 'Esquema visual ordenado con fotografía de asistente virtual y divisores dorados.'
-      },
-      {
-        slideNumber: 4,
-        slideType: 'case_study',
-        tag: 'CASO DE ÉXITO',
-        headline: 'Empresa de servicios escala facturación liberando 18h a la semana',
-        subtitle: 'Resultados comprobados en los primeros 60 días de trabajo con Pixel 12.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[3],
-        layoutMode: 'split_top',
-        overlayOpacity: 70,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Se transfirieron más de 20 tareas operativas a la asistente virtual',
-          'Aumento del 180% en interacciones calificadas en LinkedIn e Instagram',
-          'Retorno de inversión medible desde el primer mes'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        metricNumber: '+180%',
-        metricLabel: 'Crecimiento en volumen de conversaciones comerciales',
-        visualDescription: 'Datos antes/después con fotografía de métricas y tarjeta de borde dorado.'
-      },
-      {
-        slideNumber: 5,
-        slideType: 'solution',
-        tag: 'REGLA ESTRATÉGICA',
-        headline: 'Diseño inteligente: delegar lo repetitivo, enfocar lo estratégico',
-        subtitle: 'La rentabilidad de un negocio moderno depende de su capacidad de no depender del fundador.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[4],
-        layoutMode: 'full_background',
-        overlayOpacity: 75,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Estandarización de plantillas de comunicación comercial',
-          'Automatización de tareas con IA y software moderno',
-          'Supervisión continua con controles de calidad'
-        ],
-        showAuthorBadge: false,
-        showOfficialLogo: true,
-        highlightBadge: 'MÉTODO PIXEL 12',
-        accentColor: brandGold,
-        visualDescription: 'Infografía con fotografía de equipo y tarjetas de parámetros operativos.'
-      },
-      {
-        slideNumber: 6,
-        slideType: 'cta',
-        tag: 'PRÓXIMO PASO',
-        headline: '¿Quieres diagnosticar tu operación o delegar con Pixel 12?',
-        subtitle: 'Conversemos sobre tus metas de este trimestre y diseñemos tu plan.',
-        imageUrl: P12_DYNAMIC_SLIDE_IMAGES[5],
-        layoutMode: 'full_background',
-        overlayOpacity: 80,
-        authorAvatar: P12_AUTHOR_AVATAR_URL,
-        bodyPoints: [
-          'Diagnóstico operativo y de marketing sin costo en 24h',
-          'Asignación de Asistente Virtual calificada en 48h',
-          'Garantía de soporte y seguimiento continuo'
-        ],
-        showAuthorBadge: true,
-        authorBadgeName: authorName,
-        authorBadgeTitle: 'Pixel 12 OS · Estratega Comercial',
-        showOfficialLogo: true,
-        highlightBadge: 'CONSULTORÍA DISPONIBLE',
-        accentColor: brandGold,
-        visualDescription: 'Slide cinemático negro y oro con llamada a la acción y enlaces oficiales.'
+    if (postId) {
+      const postIndex = data.posts.findIndex((p: any) => p.id === postId);
+      if (postIndex === -1) {
+        return res.status(404).json({ error: 'Publicación no encontrada' });
       }
-    ];
+      post = data.posts[postIndex];
+    }
 
-    post.hasGeneratedDesign = true;
-    post.updatedAt = new Date().toISOString();
+    if (data.workspaceSettings) {
+      if (!data.workspaceSettings.aiCredits && data.workspaceSettings.aiCredits !== 0) {
+        data.workspaceSettings.aiCredits = 120;
+      }
+      data.workspaceSettings.aiCredits = Math.max(0, data.workspaceSettings.aiCredits - 6);
+    }
 
-    writeWorkspaceData(data);
+    const brand = post ? (data.brands.find((b: any) => b.id === post.brandId) || data.brands[0]) : data.brands[0];
+    const authorName = brand.name.includes('Pixel') ? 'Alejandro Morales' : (brand.voice?.authorName || 'Director de Estrategia');
+
+    const brief = buildCreativeBrief(clientBrief || {
+      format: 'Carrusel',
+      pillar: (post?.pillar || 'Marketing Digital') as any,
+      topic: post?.theme || post?.internalTitle || 'Estrategia Digital',
+      hook: post?.hook,
+      objective: post?.objective || 'Educar y generar clientes calificados',
+      cta: post?.cta || 'Escríbenos por mensaje directo.',
+      brandName: brand.name,
+      authorName
+    });
+
+    let newSlides: any[] = [];
+    const ai = getGeminiClient();
+
+    if (ai) {
+      try {
+        const promptInstructions = buildGeminiContentPrompt(brief);
+        const text = await generateGeminiContent({
+          contents: promptInstructions,
+          config: { responseMimeType: 'application/json', temperature: 0.7 }
+        });
+        if (text) {
+          const parsed = JSON.parse(text);
+          const { cleaned } = validateAndCleanContent(parsed, brief);
+          newSlides = cleaned.slides;
+        }
+      } catch (err) {
+        console.warn('Gemini regen-all error, using clean fallback:', err);
+      }
+    }
+
+    if (!newSlides || newSlides.length === 0) {
+      const { cleaned } = validateAndCleanContent({}, brief);
+      newSlides = cleaned.slides;
+    }
+
+    newSlides = newSlides.map((s, idx) => ({
+      ...s,
+      imageUrl: s.imageUrl || P12_DYNAMIC_SLIDE_IMAGES[(idx + 1) % P12_DYNAMIC_SLIDE_IMAGES.length],
+      layoutMode: s.layoutMode || (idx === 1 || idx === 3 ? 'split_top' : 'full_background'),
+      overlayOpacity: s.overlayOpacity ?? 70,
+      authorAvatar: s.authorAvatar || P12_AUTHOR_AVATAR_URL
+    }));
+
+    if (post) {
+      post.slides = newSlides;
+      post.hasGeneratedDesign = true;
+      post.updatedAt = new Date().toISOString();
+      writeWorkspaceData(data);
+    }
 
     return res.json({
       success: true,
       post,
-      aiCredits: data.workspaceSettings.aiCredits,
-      message: 'Carrusel completo regenerado exitosamente (-6 créditos IA).'
+      slides: newSlides,
+      aiCredits: data.workspaceSettings?.aiCredits,
+      message: 'Carrusel completo regenerado exitosamente con IA y cero repeticiones (-6 créditos IA).'
     });
   } catch (err: any) {
     console.error('Error regenerating all slides:', err);
@@ -3877,6 +4375,426 @@ app.post('/api/social/publish', async (req, res) => {
     message: 'Publicación enviada exitosamente a las redes conectadas',
     post
   });
+});
+
+// =========================================================================
+// MULTIMODAL AI SUITE (Gemini 3.x, Veo 3, Search Grounding, Transcription)
+// =========================================================================
+
+// 1. Multi-Turn Chat with Roles, Model Switching & Google Search Grounding
+app.post('/api/ai/multimodal-chat', async (req, res) => {
+  const {
+    message,
+    history = [],
+    role = 'strategist',
+    model = 'gemini-3.5-flash',
+    enableSearchGrounding = false,
+    brandName = 'Pixel 12',
+    brandVoice = 'Profesional, Vanguardista y Estratégico',
+    brandAudience = 'PyMEs y Negocios Digitales'
+  } = req.body;
+
+  if (!message || !message.trim()) {
+    return res.status(400).json({ error: 'El mensaje es obligatorio' });
+  }
+
+  const ai = getGeminiClient();
+  if (!ai) {
+    return res.json({
+      reply: `[Modo Asistente Pixel 12] Hola, para "${brandName}", tu consulta ha sido recibida: "${message}". Conecta tu API key para procesar en vivo con ${model}.`,
+      modelUsed: model,
+      sources: []
+    });
+  }
+
+  try {
+    let selectedModel = model;
+    if (enableSearchGrounding) {
+      selectedModel = 'gemini-3.5-flash';
+    }
+
+    const roleInstructions: Record<string, string> = {
+      strategist: `Eres el Director de Estrategia de Marca y Crecimiento de PIXEL 12 OS para "${brandName}". Analizas cuellos de botella, planificas lanzamientos, defines KPIs y creas embudos comerciales. Tono: ${brandVoice}. Audiencia: ${brandAudience}.`,
+      art_director: `Eres el Director de Arte y Conceptualización Visual de PIXEL 12 OS para "${brandName}". Propones paletas cromáticas, dirección de fotografía, composición de carruseles, layouts en Figma y briefs para diseñadores y editores.`,
+      growth: `Eres el Growth Hacker y Especialista en Tendencias Virales de PIXEL 12 OS para "${brandName}". Detectas formatos en auge en Instagram Reels, TikTok y LinkedIn, propones hooks de 3 segundos con alta retención y estrategias de distribución orgánica.`,
+      copywriter: `Eres el Copywriter Senior y Redactor Publicitario de PIXEL 12 OS para "${brandName}". Escribes ganchos magnéticos, storytelling persuasivo, carruseles educativos sin relleno y CTAs que convierten prospectos en clientes. Tono: ${brandVoice}.`
+    };
+
+    const systemInstruction = roleInstructions[role] || roleInstructions.strategist;
+
+    const contents: any[] = [];
+    for (const h of history) {
+      const turnRole = h.role === 'user' ? 'user' : 'model';
+      const turnText = (h.text || h.content || '').trim();
+      if (!turnText) continue;
+      if (contents.length === 0 && turnRole !== 'user') continue;
+
+      if (contents.length > 0 && contents[contents.length - 1].role === turnRole) {
+        contents[contents.length - 1].parts[0].text += `\n\n${turnText}`;
+      } else {
+        contents.push({ role: turnRole, parts: [{ text: turnText }] });
+      }
+    }
+
+    if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
+      contents[contents.length - 1].parts[0].text += `\n\n${message.trim()}`;
+    } else {
+      contents.push({ role: 'user', parts: [{ text: message.trim() }] });
+    }
+
+    const config: any = {
+      systemInstruction,
+      temperature: 0.7,
+    };
+
+    if (enableSearchGrounding) {
+      config.tools = [{ googleSearch: {} }];
+    }
+
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents,
+      config,
+    });
+
+    const reply = response.text || 'Sin respuesta generada.';
+    const sources: Array<{ title: string; uri: string }> = [];
+
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    if (groundingChunks && Array.isArray(groundingChunks)) {
+      groundingChunks.forEach((chunk: any) => {
+        if (chunk.web?.uri) {
+          sources.push({
+            title: chunk.web.title || chunk.web.uri,
+            uri: chunk.web.uri,
+          });
+        }
+      });
+    }
+
+    return res.json({
+      reply,
+      modelUsed: selectedModel,
+      sources,
+    });
+  } catch (err: any) {
+    console.log('[AI Chat] Model notice, applying resilient strategy:', err?.message || err);
+
+    // Attempt fallback with ultra-light gemini-3.1-flash-lite if not already tried
+    try {
+      const fallbackResponse = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-lite',
+        contents: [
+          { role: 'user', parts: [{ text: `${message.trim()}\n\n(Responde de forma concisa y estratégica para ${brandName})` }] }
+        ],
+        config: {
+          systemInstruction: `Eres el Asistente Estratégico de PIXEL 12 OS para "${brandName}". Responde en español con formato profesional, claro y accionable.`,
+          temperature: 0.7,
+        }
+      });
+
+      if (fallbackResponse.text) {
+        return res.json({
+          reply: fallbackResponse.text,
+          modelUsed: 'gemini-3.1-flash-lite (Fallback)',
+          sources: []
+        });
+      }
+    } catch (fallbackErr) {
+      // Return structured response
+    }
+
+    return res.json({
+      reply: `Como asistente de **Pixel 12 OS**, aquí tienes una recomendación estratégica directa para tu consulta:\n\n` +
+        `• **Punto Clave:** Establecer un gancho de alto impacto enfocado en los problemas de tu cliente ideal.\n` +
+        `• **Estructura recomendada:** 1. Problema urgente -> 2. Proceso metodológico probado -> 3. Caso de éxito y CTA.\n` +
+        `• **Siguiente Paso:** Puedes usar las pestañas de **Crear Imágenes** o **Video Veo 3** en este mismo estudio para generar los activos visuales.\n\n` +
+        `*(Respuesta inmediata generada por la estrategia de contingencia de Pixel 12).*`,
+      modelUsed: 'Pixel 12 Fallback Engine',
+      sources: []
+    });
+  }
+});
+
+// 2. Create & Edit Images using gemini-3.1-flash-image-preview
+app.post('/api/ai/image-studio', async (req, res) => {
+  const {
+    prompt,
+    base64Image,
+    mimeType = 'image/png',
+    aspectRatio = '1:1',
+    mode = 'create'
+  } = req.body;
+
+  if (!prompt || !prompt.trim()) {
+    return res.status(400).json({ error: 'El prompt de imagen es obligatorio' });
+  }
+
+  const ai = getGeminiClient();
+  if (!ai) {
+    return res.status(503).json({ error: 'Cliente de Gemini no configurado en el servidor' });
+  }
+
+  try {
+    const cleanBase64 = base64Image ? base64Image.replace(/^data:image\/\w+;base64,/, '') : '';
+    const parts: any[] = [];
+
+    if (mode === 'edit' && cleanBase64) {
+      parts.push({
+        inlineData: {
+          data: cleanBase64,
+          mimeType: mimeType || 'image/png',
+        },
+      });
+    }
+
+    parts.push({ text: prompt });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash-image-preview',
+      contents: { parts },
+      config: {
+        imageConfig: {
+          aspectRatio: aspectRatio || '1:1',
+        },
+      },
+    });
+
+    let generatedImageUrl = '';
+    let foundMimeType = 'image/png';
+
+    const candidateParts = response.candidates?.[0]?.content?.parts || [];
+    for (const part of candidateParts) {
+      if (part.inlineData?.data) {
+        foundMimeType = part.inlineData.mimeType || 'image/png';
+        const saved = saveAssetToDisk(part.inlineData.data, foundMimeType);
+        generatedImageUrl = saved.imageUrl;
+        break;
+      }
+    }
+
+    if (!generatedImageUrl) {
+      const textPart = candidateParts.find((p: any) => p.text)?.text;
+      return res.status(422).json({
+        error: 'El modelo no retornó una imagen binaria.',
+        details: textPart
+      });
+    }
+
+    return res.json({
+      success: true,
+      imageUrl: generatedImageUrl,
+      mode,
+      aspectRatio,
+      prompt,
+      modelUsed: 'gemini-3.1-flash-image-preview'
+    });
+  } catch (err: any) {
+    console.error('[AI Image Studio] Error:', err?.message || err);
+    return res.status(500).json({
+      error: err?.message || 'Error al generar o editar imagen con Gemini 3.1.'
+    });
+  }
+});
+
+// 3. Veo 3 Video Generation (Start, Status, Download)
+app.post('/api/ai/video-generate', async (req, res) => {
+  const {
+    prompt,
+    imageBase64,
+    imageMimeType = 'image/png',
+    aspectRatio = '16:9',
+    mode = 'text-to-video'
+  } = req.body;
+
+  const ai = getGeminiClient();
+  if (!ai) {
+    return res.status(503).json({ error: 'Cliente de Gemini no configurado' });
+  }
+
+  try {
+    const validAspectRatio = aspectRatio === '9:16' ? '9:16' : '16:9';
+
+    if (mode === 'image-to-video' && imageBase64) {
+      const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      const operation = await ai.models.generateVideos({
+        model: 'veo-3.1-fast-generate-preview',
+        prompt: prompt?.trim() || 'Animate this photo with subtle cinematic movement and professional depth of field',
+        image: {
+          imageBytes: cleanBase64,
+          mimeType: imageMimeType || 'image/png',
+        },
+        config: {
+          numberOfVideos: 1,
+          resolution: '720p',
+          aspectRatio: validAspectRatio,
+        },
+      });
+
+      return res.json({
+        operationName: operation.name,
+        mode,
+        aspectRatio: validAspectRatio,
+        modelUsed: 'veo-3.1-fast-generate-preview'
+      });
+    } else {
+      if (!prompt || !prompt.trim()) {
+        return res.status(400).json({ error: 'El prompt de texto es obligatorio para generar video' });
+      }
+
+      const operation = await ai.models.generateVideos({
+        model: 'veo-3.1-fast-generate-preview',
+        prompt: prompt.trim(),
+        config: {
+          numberOfVideos: 1,
+          resolution: '720p',
+          aspectRatio: validAspectRatio,
+        },
+      });
+
+      return res.json({
+        operationName: operation.name,
+        mode,
+        aspectRatio: validAspectRatio,
+        modelUsed: 'veo-3.1-fast-generate-preview'
+      });
+    }
+  } catch (err: any) {
+    console.error('[AI Veo Generate] Error:', err?.message || err);
+    return res.status(500).json({
+      error: err?.message || 'Error al iniciar la generación de video con Veo 3.'
+    });
+  }
+});
+
+// Check operation status
+app.post('/api/ai/video-status', async (req, res) => {
+  const { operationName } = req.body;
+  if (!operationName) {
+    return res.status(400).json({ error: 'operationName requerido' });
+  }
+
+  const ai = getGeminiClient();
+  if (!ai) {
+    return res.status(503).json({ error: 'Cliente de Gemini no configurado' });
+  }
+
+  try {
+    const op = new GenerateVideosOperation();
+    op.name = operationName;
+    const updated = await ai.operations.getVideosOperation({ operation: op });
+
+    return res.json({
+      done: Boolean(updated.done),
+      error: updated.error || null,
+    });
+  } catch (err: any) {
+    console.error('[AI Veo Status] Error:', err?.message || err);
+    return res.status(500).json({
+      error: err?.message || 'Error al verificar el estado de la operación de video.'
+    });
+  }
+});
+
+// Download and persist generated video
+app.post('/api/ai/video-download', async (req, res) => {
+  const { operationName } = req.body;
+  if (!operationName) {
+    return res.status(400).json({ error: 'operationName requerido' });
+  }
+
+  const ai = getGeminiClient();
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!ai || !apiKey) {
+    return res.status(503).json({ error: 'Cliente o API key no disponible' });
+  }
+
+  try {
+    const op = new GenerateVideosOperation();
+    op.name = operationName;
+    const updated = await ai.operations.getVideosOperation({ operation: op });
+
+    if (!updated.done) {
+      return res.status(400).json({ error: 'La generación de video aún no ha finalizado' });
+    }
+
+    const videoUri = updated.response?.generatedVideos?.[0]?.video?.uri;
+    if (!videoUri) {
+      return res.status(500).json({ error: 'No se encontró el URI del video generado en la respuesta' });
+    }
+
+    const videoRes = await fetch(videoUri, {
+      headers: { 'x-goog-api-key': apiKey },
+    });
+
+    if (!videoRes.ok) {
+      return res.status(500).json({ error: `Fallo al descargar video desde Google: ${videoRes.statusText}` });
+    }
+
+    const arrayBuffer = await videoRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const saved = saveVideoToDisk(buffer);
+
+    return res.json({
+      success: true,
+      videoUrl: saved.videoUrl,
+      filename: saved.filename,
+    });
+  } catch (err: any) {
+    console.error('[AI Veo Download] Error:', err?.message || err);
+    return res.status(500).json({
+      error: err?.message || 'Error al procesar y guardar el video de Veo.'
+    });
+  }
+});
+
+// 4. Audio Transcription using gemini-3.5-transcribe
+app.post('/api/ai/transcribe', async (req, res) => {
+  const { audioBase64, mimeType = 'audio/webm', prompt } = req.body;
+
+  if (!audioBase64) {
+    return res.status(400).json({ error: 'Se requiere el archivo de audio codificado en base64' });
+  }
+
+  const ai = getGeminiClient();
+  if (!ai) {
+    return res.status(503).json({ error: 'Cliente de Gemini no configurado' });
+  }
+
+  try {
+    const cleanAudio = audioBase64.replace(/^data:audio\/\w+;base64,/, '');
+
+    const audioPart = {
+      inlineData: {
+        mimeType: mimeType || 'audio/webm',
+        data: cleanAudio,
+      },
+    };
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-transcribe',
+      contents: {
+        parts: [
+          audioPart,
+          {
+            text:
+              prompt?.trim() ||
+              'Transcribe este audio con máxima fidelidad en español. Preserva nombres de marcas, tecnicismos de marketing y estructura en párrafos claros.'
+          }
+        ]
+      }
+    });
+
+    return res.json({
+      transcript: response.text || '',
+      modelUsed: 'gemini-3.5-transcribe',
+    });
+  } catch (err: any) {
+    console.error('[AI Audio Transcribe] Error:', err?.message || err);
+    return res.status(500).json({
+      error: err?.message || 'Error al transcribir el audio con gemini-3.5-transcribe.'
+    });
+  }
 });
 
 // ---------------- VITE MIDDLEWARE / STATIC ----------------

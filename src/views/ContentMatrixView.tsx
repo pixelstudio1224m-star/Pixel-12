@@ -279,7 +279,7 @@ export const ContentMatrixView: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Matriz Contenido');
     XLSX.writeFile(
       workbook,
-      `Matriz_${activeBrand.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      `Matriz_${(activeBrand?.name || 'Marca').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
     );
     showToast('Archivo Excel exportado exitosamente');
   };

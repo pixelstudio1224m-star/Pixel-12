@@ -364,10 +364,10 @@ export const BrandsView: React.FC = () => {
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-black text-lg shadow-lg"
               style={{
-                background: `linear-gradient(135deg, ${activeBrand.colors?.primary || '#D4AF37'}, ${activeBrand.colors?.secondary || '#CBD5E1'})`
+                background: `linear-gradient(135deg, ${activeBrand?.colors?.primary || '#D4AF37'}, ${activeBrand?.colors?.secondary || '#CBD5E1'})`
               }}
             >
-              {activeBrand.name.slice(0, 2).toUpperCase()}
+              {(activeBrand?.name || 'P12').slice(0, 2).toUpperCase()}
             </div>
             {activeBrand.id === 'brand_pixel12' && (
               <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#09090B] border border-[#D4AF37] flex items-center justify-center shadow-xs">
@@ -1301,7 +1301,7 @@ export const BrandsView: React.FC = () => {
                   color: '#000000'
                 }}
               >
-                {name.slice(0, 2).toUpperCase()}
+                {(name || 'P12').slice(0, 2).toUpperCase()}
               </div>
               <div className="overflow-hidden">
                 <h4 className="font-bold text-white text-sm truncate">{name}</h4>

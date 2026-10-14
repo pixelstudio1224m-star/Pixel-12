@@ -169,24 +169,33 @@ export const CopilotView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            setMessages([
-              {
-                id: 'init_' + Date.now(),
-                sender: 'assistant',
-                text: `Historial reiniciado. Estoy listo para ayudarte con contenido fresco y estratégico para **${activeBrand?.name || 'Pixel 12 Media'}**.`,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              },
-            ]);
-            showToast('Conversación reiniciada');
-          }}
-          className="px-3 py-1.5 text-zinc-400 hover:text-white hover:bg-[#1A1A28] rounded-xl border border-[#28283C] transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
-          title="Reiniciar chat"
-        >
-          <RefreshCw className="w-3.5 h-3.5 text-[#D4AF37]" />
-          <span className="hidden sm:inline">Limpiar chat</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveView('ai-studio')}
+            className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+            <span className="hidden sm:inline">Estudio Multimodal IA</span>
+          </button>
+          <button
+            onClick={() => {
+              setMessages([
+                {
+                  id: 'init_' + Date.now(),
+                  sender: 'assistant',
+                  text: `Historial reiniciado. Estoy listo para ayudarte con contenido fresco y estratégico para **${activeBrand?.name || 'Pixel 12 Media'}**.`,
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                },
+              ]);
+              showToast('Conversación reiniciada');
+            }}
+            className="px-3 py-1.5 text-zinc-400 hover:text-white hover:bg-[#1A1A28] rounded-xl border border-[#28283C] transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+            title="Reiniciar chat"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span className="hidden sm:inline">Limpiar</span>
+          </button>
+        </div>
       </div>
 
       {/* Messages Scroll Area */}

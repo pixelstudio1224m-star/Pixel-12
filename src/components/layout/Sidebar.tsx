@@ -105,6 +105,13 @@ export const Sidebar: React.FC = () => {
               badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
             },
             {
+              id: 'ai-studio' as ViewType,
+              label: 'Estudio Multimodal IA',
+              icon: Sparkles,
+              badge: 'VEO · 3.x',
+              badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+            },
+            {
               id: 'design-content' as ViewType,
               label: 'Diseño & Contenido',
               icon: Wand2,

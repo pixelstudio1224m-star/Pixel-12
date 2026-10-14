@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { AgencyPlan, AgencyCustomService, CommercialSettings } from '../../types';
+import { formatBankDetails, formatTerms } from '../../lib/quotesData';
 import {
   X,
   Plus,
@@ -33,16 +34,17 @@ export const PlansCatalogModal: React.FC<PlansCatalogModalProps> = ({
   const [editingService, setEditingService] = useState<AgencyCustomService | null>(null);
 
   // Settings state
-  const [settings, setSettings] = useState<CommercialSettings>(
-    data.commercialSettings || {
-      defaultCurrency: 'USD',
-      taxPercent: 15,
-      validityDays: 15,
-      paymentTermsDefault: '50% anticipo al iniciar y 50% al corte mensual.',
-      bankDetails: 'Banco Pichincha - Cta. Corriente #2100234589 a nombre de Pixel 12 Agency.',
-      termsAndConditions: 'Validez 15 días. Entregables sujetos a cronograma aprobado.'
-    }
-  );
+  const [settings, setSettings] = useState<CommercialSettings>(() => {
+    const raw = data.commercialSettings;
+    return {
+      defaultCurrency: raw?.defaultCurrency || 'USD',
+      taxPercent: raw?.taxPercent ?? 15,
+      validityDays: raw?.validityDays ?? 15,
+      paymentTermsDefault: raw?.paymentTermsDefault || '50% anticipo al iniciar y 50% al corte mensual.',
+      bankDetails: formatBankDetails(raw?.bankDetails) || 'Banco Pichincha - Cta. Corriente #2100234589 a nombre de Pixel 12 Agency.',
+      termsAndConditions: formatTerms(raw?.termsAndConditions || raw?.defaultTerms) || 'Validez 15 días. Entregables sujetos a cronograma aprobado.'
+    };
+  });
 
   if (!isOpen) return null;
 
@@ -572,7 +574,7 @@ export const PlansCatalogModal: React.FC<PlansCatalogModalProps> = ({
                 </label>
                 <textarea
                   rows={3}
-                  value={settings.bankDetails}
+                  value={typeof settings.bankDetails === 'string' ? settings.bankDetails : formatBankDetails(settings.bankDetails)}
                   onChange={(e) => setSettings({ ...settings, bankDetails: e.target.value })}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono"
                 />
@@ -584,7 +586,7 @@ export const PlansCatalogModal: React.FC<PlansCatalogModalProps> = ({
                 </label>
                 <textarea
                   rows={3}
-                  value={settings.termsAndConditions}
+                  value={typeof settings.termsAndConditions === 'string' ? settings.termsAndConditions : formatTerms(settings.termsAndConditions)}
                   onChange={(e) => setSettings({ ...settings, termsAndConditions: e.target.value })}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />

@@ -22,6 +22,7 @@ import { DashboardView } from './views/DashboardView';
 import { BlogView } from './views/BlogView';
 import { DesignContentView } from './views/DesignContentView';
 import { CopilotView } from './views/CopilotView';
+import { AiStudioView } from './views/AiStudioView';
 import { ContentCalendarView } from './views/ContentCalendarView';
 import { ContentMatrixView } from './views/ContentMatrixView';
 import { PostsView } from './views/PostsView';
@@ -84,6 +85,8 @@ const WorkspaceShell: React.FC = () => {
         return <DashboardView />;
       case 'blog':
         return <BlogView />;
+      case 'ai-studio':
+        return <AiStudioView />;
       case 'design-content':
         return <DesignContentView />;
       case 'copilot':

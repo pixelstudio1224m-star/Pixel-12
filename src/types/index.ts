@@ -253,6 +253,7 @@ export interface Task {
   deadlineDate: string; // YYYY-MM-DD
   deadlineTime: string; // HH:mm
   status: TaskStatus;
+  progress?: number; // 0 - 100 percentage completion
   tags: string[];
   checklist: TaskChecklistItem[];
   comments: TaskComment[];
@@ -467,6 +468,7 @@ export type DesignFormatType =
   | 'Post'
   | 'Creativo de pauta'
   | 'Guion de Reel'
+  | 'Historia / Stories'
   | 'Blog SEO';
 
 export type DesignPillarType =
@@ -502,15 +504,74 @@ export type AIRefinementAction =
   | 'generate_cta'
   | 'generate_visual_concept';
 
+export interface CreativeBrief {
+  format: DesignFormatType;
+  topic: string;
+  objective?: string;
+  hook?: string;
+  cta?: string;
+  audience?: string;
+  tone?: string;
+  additionalInstructions?: string;
+  freeformPrompt?: string;
+  slidesCount?: number;
+  pillar?: DesignPillarType;
+  style?: DesignStyleType;
+  brandName?: string;
+  authorName?: string;
+  brandKit?: {
+    name: string;
+    services: string[];
+    colors: Record<string, string>;
+    styleDescription: string;
+  };
+}
+
+export interface StorySequenceItem {
+  number: number;
+  role: 'hook' | 'development' | 'interaction' | 'solution' | 'cta';
+  headline: string;
+  body: string;
+  stickerType?: 'poll' | 'question' | 'slider' | 'quiz' | 'cta' | 'link';
+  stickerText?: string;
+  stickerOptions?: string[];
+  visualConcept?: string;
+  imagePrompt?: string;
+  imageUrl?: string;
+  assetId?: string;
+  imageStatus?: ImageGenerationStatus;
+  imageError?: string;
+}
+
+export type ImageGenerationStatus = 'IMAGE_PENDING' | 'IMAGE_GENERATING' | 'IMAGE_GENERATED' | 'IMAGE_FAILED';
+
+export interface ContentAsset {
+  id: string;
+  contentId?: string;
+  slideNumber?: number;
+  type: 'image' | 'video' | 'cover';
+  prompt: string;
+  imageUrl?: string;
+  dataUrl?: string;
+  status: ImageGenerationStatus;
+  error?: string;
+  createdAt: string;
+}
+
 export interface DesignSlide {
   slideNumber: number;
-  slideType: 'cover' | 'problem' | 'solution' | 'case_study' | 'cta';
+  slideType: 'cover' | 'problem' | 'solution' | 'case_study' | 'cta' | 'interactive';
+  role?: 'hook' | 'problem' | 'development' | 'solution' | 'conclusion' | 'cta' | 'interactive';
   tag?: string;
   headline: string;
   subtitle?: string;
   bodyPoints?: string[];
   imageUrl?: string;
   imagePrompt?: string;
+  visualConcept?: string;
+  assetId?: string;
+  imageStatus?: ImageGenerationStatus;
+  imageError?: string;
   layoutMode?: 'full_background' | 'split_top' | 'split_side' | 'floating_card' | 'quote_portrait';
   overlayOpacity?: number; // 0 to 100
   showAuthorBadge?: boolean;
@@ -523,6 +584,12 @@ export interface DesignSlide {
   accentColor?: string;
   metricNumber?: string;
   metricLabel?: string;
+  interactiveSticker?: {
+    type: 'poll' | 'quiz' | 'question' | 'slider' | 'link';
+    question?: string;
+    options?: string[];
+    linkText?: string;
+  };
 }
 
 export interface ReelScriptScene {
@@ -530,6 +597,12 @@ export interface ReelScriptScene {
   shotType: string;
   visualDirection: string;
   voiceover: string;
+  onScreenText?: string;
+  imagePrompt?: string;
+  imageUrl?: string;
+  assetId?: string;
+  imageStatus?: ImageGenerationStatus;
+  imageError?: string;
 }
 
 export interface BlogSEOContent {
@@ -547,6 +620,7 @@ export interface GeneratedDesignContent {
   id: string;
   title: string;
   theme: string;
+  concept?: string;
   format: DesignFormatType;
   pillar: DesignPillarType;
   style: DesignStyleType;
@@ -555,9 +629,17 @@ export interface GeneratedDesignContent {
   cta: string;
   hashtags: string[];
   visualConcept?: string;
+  imagePrompt?: string;
+  imageUrl?: string;
+  assetId?: string;
+  imageStatus?: ImageGenerationStatus;
+  imageError?: string;
+  assets?: ContentAsset[];
   slides: DesignSlide[];
+  storiesSequence?: StorySequenceItem[];
   reelScript?: ReelScriptScene[];
   blogSEO?: BlogSEOContent;
+  brief?: CreativeBrief;
   suggestedTasks?: Array<{
     title: string;
     description: string;

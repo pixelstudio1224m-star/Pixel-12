@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { QuoteProposal, QuoteItem, QuoteStatus, RoadmapPhase } from '../../types';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { normalizeQuote, formatBankDetails, formatTerms } from '../../lib/quotesData';
 import {
   X,
   Printer,
@@ -34,6 +35,10 @@ interface QuoteDetailModalProps {
   initialEditMode?: boolean;
 }
 
+const formatMoney = (val?: number | null): string => {
+  return (Number(val) || 0).toFixed(2);
+};
+
 export const QuoteDetailModal: React.FC<QuoteDetailModalProps> = ({
   quote,
   isOpen,
@@ -43,10 +48,18 @@ export const QuoteDetailModal: React.FC<QuoteDetailModalProps> = ({
 }) => {
   const { addToast, data } = useWorkspace();
   const [isEditing, setIsEditing] = useState(initialEditMode);
-  const [editedQuote, setEditedQuote] = useState<QuoteProposal>(quote);
+  
+  const activeQuote = useMemo(() => (quote ? normalizeQuote(quote) : ({} as QuoteProposal)), [quote]);
+  const [editedQuote, setEditedQuote] = useState<QuoteProposal>(() => (quote ? normalizeQuote(quote) : ({} as QuoteProposal)));
   const [copiedLink, setCopiedLink] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (quote) {
+      setEditedQuote(normalizeQuote(quote));
+    }
+  }, [quote]);
+
+  if (!isOpen || !quote) return null;
 
   // Handle printing
   const handlePrint = () => {
@@ -56,16 +69,16 @@ export const QuoteDetailModal: React.FC<QuoteDetailModalProps> = ({
   // Copy proposal summary to clipboard
   const handleCopySummary = () => {
     const summaryText = `*PROPUESTA COMERCIAL PIXEL 12*
-Folio: ${quote.folio}
-Cliente: ${quote.client.company} (${quote.client.name})
-Total Inversión: $${quote.total} ${quote.currency}
-Validez: Hasta el ${quote.validUntil}
+Folio: ${activeQuote.folio || ''}
+Cliente: ${activeQuote.client?.company || 'Cliente'} (${activeQuote.client?.name || ''})
+Total Inversión: $${formatMoney(activeQuote.total)} ${activeQuote.currency || 'USD'}
+Validez: Hasta el ${activeQuote.validUntil || ''}
 
 *Servicios Incluidos:*
-${(quote.items || []).map((i) => `• ${i.name} ($${i.total})`).join('\n')}
+${(activeQuote.items || []).map((i) => `• ${i.name} ($${formatMoney(i.total)})`).join('\n')}
 
 *Condiciones de Pago:*
-${quote.paymentTerms}
+${activeQuote.paymentTerms || ''}
 
 Para revisar el documento completo, contáctanos en Pixel 12.`;
 
@@ -81,10 +94,12 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
     discountPercent: number,
     taxPercent: number
   ) => {
-    const subtotal = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-    const discountAmount = Number(((subtotal * (discountPercent || 0)) / 100).toFixed(2));
-    const taxableBase = subtotal - discountAmount;
-    const taxAmount = Number(((taxableBase * (taxPercent || 0)) / 100).toFixed(2));
+    const subtotal = (items || []).reduce((sum, item) => sum + (Number(item?.total) || 0), 0);
+    const discPct = Number(discountPercent) || 0;
+    const discountAmount = Number(((subtotal * discPct) / 100).toFixed(2));
+    const taxableBase = Math.max(0, subtotal - discountAmount);
+    const txPct = Number(taxPercent) || 0;
+    const taxAmount = Number(((taxableBase * txPct) / 100).toFixed(2));
     const total = Number((taxableBase + taxAmount).toFixed(2));
 
     return { subtotal, discountAmount, taxAmount, total };
@@ -505,10 +520,10 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                             {item.quantity}
                           </td>
                           <td className="p-3 text-right font-mono text-zinc-300 print:text-black">
-                            ${item.unitPrice.toFixed(2)}
+                            ${formatMoney(item.unitPrice)}
                           </td>
                           <td className="p-3 text-right font-mono font-bold text-white print:text-black">
-                            ${item.total.toFixed(2)}
+                            ${formatMoney(item.total)}
                           </td>
                         </tr>
                       ))}
@@ -522,28 +537,28 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                     <div className="flex justify-between text-zinc-400 print:text-zinc-600">
                       <span>Subtotal:</span>
                       <span className="font-mono font-medium text-zinc-200 print:text-black">
-                        ${quote.subtotal.toFixed(2)}
+                        ${formatMoney(activeQuote.subtotal)}
                       </span>
                     </div>
 
-                    {quote.discountPercent > 0 && (
+                    {(Number(activeQuote.discountPercent) || 0) > 0 && (
                       <div className="flex justify-between text-emerald-400 print:text-emerald-700">
-                        <span>Descuento ({quote.discountPercent}%):</span>
-                        <span className="font-mono font-medium">-${quote.discountAmount.toFixed(2)}</span>
+                        <span>Descuento ({activeQuote.discountPercent}%):</span>
+                        <span className="font-mono font-medium">-${formatMoney(activeQuote.discountAmount)}</span>
                       </div>
                     )}
 
                     <div className="flex justify-between text-zinc-400 print:text-zinc-600">
-                      <span>IVA ({quote.taxPercent}%):</span>
+                      <span>IVA ({activeQuote.taxPercent || 0}%):</span>
                       <span className="font-mono font-medium text-zinc-200 print:text-black">
-                        ${quote.taxAmount.toFixed(2)}
+                        ${formatMoney(activeQuote.taxAmount)}
                       </span>
                     </div>
 
                     <div className="pt-2 border-t border-zinc-800 print:border-zinc-300 flex justify-between items-baseline">
                       <span className="text-sm font-bold text-white print:text-black">Total Inversión:</span>
                       <span className="text-xl font-black font-mono text-[#D4AF37] print:text-black">
-                        ${quote.total.toFixed(2)} <span className="text-xs text-zinc-400">{quote.currency}</span>
+                        ${formatMoney(activeQuote.total)} <span className="text-xs text-zinc-400">{activeQuote.currency || 'USD'}</span>
                       </span>
                     </div>
                   </div>
@@ -640,10 +655,10 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                     Condiciones Comerciales & Forma de Pago
                   </h3>
                   <p className="text-xs text-zinc-300 print:text-zinc-700 leading-relaxed mb-3">
-                    {quote.paymentTerms}
+                    {formatTerms(activeQuote.paymentTerms || quote.paymentTerms)}
                   </p>
                   <p className="text-[11px] text-zinc-400 print:text-zinc-600 leading-relaxed">
-                    {quote.termsAndConditions}
+                    {formatTerms(activeQuote.termsAndConditions || quote.termsAndConditions)}
                   </p>
                 </div>
 
@@ -653,7 +668,7 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                     Datos para Transferencia Bancaria
                   </h3>
                   <div className="p-3 bg-zinc-900 rounded-lg border border-zinc-800 text-xs text-zinc-300 print:bg-white print:border-zinc-300 font-mono whitespace-pre-line leading-relaxed">
-                    {quote.paymentMethods}
+                    {formatBankDetails(activeQuote.paymentMethods || quote.paymentMethods)}
                   </div>
                   {quote.notes && (
                     <p className="text-[11px] text-zinc-400 print:text-zinc-600 mt-2 italic">
@@ -974,7 +989,7 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                   <div className="flex flex-col justify-end text-right">
                     <span className="text-xs text-zinc-400">Total Calculado:</span>
                     <span className="text-xl font-bold font-mono text-[#D4AF37]">
-                      ${editedQuote.total.toFixed(2)} {editedQuote.currency}
+                      ${formatMoney(editedQuote.total)} {editedQuote.currency || activeQuote.currency || 'USD'}
                     </span>
                   </div>
                 </div>
@@ -1012,7 +1027,7 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                     <label className="text-[11px] text-zinc-400 block mb-1">Condiciones de Pago</label>
                     <textarea
                       rows={2}
-                      value={editedQuote.paymentTerms}
+                      value={formatTerms(editedQuote.paymentTerms)}
                       onChange={(e) => setEditedQuote({ ...editedQuote, paymentTerms: e.target.value })}
                       className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-200"
                     />
@@ -1021,7 +1036,7 @@ Para revisar el documento completo, contáctanos en Pixel 12.`;
                     <label className="text-[11px] text-zinc-400 block mb-1">Datos Bancarios para Transferencias</label>
                     <textarea
                       rows={2}
-                      value={editedQuote.paymentMethods}
+                      value={formatBankDetails(editedQuote.paymentMethods)}
                       onChange={(e) => setEditedQuote({ ...editedQuote, paymentMethods: e.target.value })}
                       className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-200 font-mono"
                     />

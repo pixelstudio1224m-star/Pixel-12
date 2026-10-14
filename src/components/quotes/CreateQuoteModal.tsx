@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { QuoteProposal, AgencyPlan, AgencyCustomService } from '../../types';
+import { formatBankDetails, formatTerms } from '../../lib/quotesData';
 import {
   X,
   Sparkles,
@@ -193,9 +194,11 @@ export const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
       discountPercent: 0,
       discountAmount: 0,
       total,
-      paymentTerms: data.commercialSettings?.paymentTermsDefault || '50% anticipo al iniciar y 50% al corte mensual.',
-      paymentMethods: data.commercialSettings?.bankDetails || 'Banco Pichincha - Cta. Cte. #2100234589 Pixel 12 Agency.',
-      termsAndConditions: data.commercialSettings?.termsAndConditions || 'Validez 15 días. Sujeto a cronograma aprobado.',
+      paymentTerms: typeof data.commercialSettings?.paymentTermsDefault === 'string'
+        ? data.commercialSettings.paymentTermsDefault
+        : '50% anticipo al iniciar y 50% al corte mensual.',
+      paymentMethods: formatBankDetails(data.commercialSettings?.bankDetails) || 'Banco Pichincha - Cta. Cte. #2100234589 Pixel 12 Agency.',
+      termsAndConditions: formatTerms(data.commercialSettings?.termsAndConditions || data.commercialSettings?.defaultTerms) || 'Validez 15 días. Sujeto a cronograma aprobado.',
       roadmap: [
         {
           phase: 'Fase 1: Onboarding y Setup Estratégico',
@@ -419,7 +422,7 @@ export const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({
                     </p>
 
                     <div className="flex flex-wrap gap-1">
-                      {plan.services.slice(0, 3).map((s, idx) => (
+                      {(plan.services || plan.includedServices || []).slice(0, 3).map((s, idx) => (
                         <span key={idx} className="text-[9px] bg-zinc-800/80 text-zinc-400 px-1.5 py-0.5 rounded">
                           {s}
                         </span>

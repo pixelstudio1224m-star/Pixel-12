@@ -156,7 +156,7 @@ export const BlogDetailModal: React.FC<BlogDetailModalProps> = ({ post, isOpen, 
       id: 'post-' + Date.now(),
       brandId: post.brandId,
       campaignId: undefined,
-      internalTitle: `Reel (60s): ${post.title.slice(0, 45)}...`,
+      internalTitle: `Reel (60s): ${(post.title || 'Artículo').slice(0, 45)}...`,
       targetDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
       targetTime: '19:00',
       platforms: ['instagram', 'tiktok', 'youtube'] as ('instagram' | 'tiktok' | 'youtube')[],
@@ -1041,7 +1041,7 @@ export const BlogDetailModal: React.FC<BlogDetailModalProps> = ({ post, isOpen, 
 
             <button
               onClick={() => {
-                showToast(`Artículo "${post.title.slice(0, 30)}..." listo para producción`, 'success');
+                showToast(`Artículo "${(post.title || 'Artículo').slice(0, 30)}..." listo para producción`, 'success');
                 onClose();
               }}
               className="px-5 py-2 text-xs font-bold rounded-xl bg-[#D4AF37] hover:bg-[#E5C158] text-black shadow-lg shadow-[#D4AF37]/20 transition-all"

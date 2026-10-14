@@ -30,7 +30,7 @@ export const GoogleAdsView: React.FC = () => {
   const totalSpent = campaigns.reduce((acc, c) => acc + (Number(c.spent) || 0), 0);
   const totalConversions = campaigns.reduce((acc, c) => acc + (Number(c.conversions) || 0), 0);
   const totalClicks = campaigns.reduce((acc, c) => acc + (Number(c.clicks) || 0), 0);
-  const averageCPC = totalClicks > 0 ? (totalSpent / totalClicks).toFixed(2) : '0.00';
+  const averageCPC = totalClicks > 0 ? (Number(totalSpent / totalClicks) || 0).toFixed(2) : '0.00';
 
   const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();

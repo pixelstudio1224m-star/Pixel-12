@@ -47,11 +47,12 @@ export const ImageLibraryModal: React.FC<ImageLibraryModalProps> = ({
   const library = data.imageLibrary || [];
 
   const filteredImages = library.filter((img) => {
+    if (!img) return false;
     const matchesCat = selectedCategory === 'TODAS' || img.category === selectedCategory;
     const matchesSearch =
       !searchQuery.trim() ||
-      img.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      img.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (img.title && img.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (Array.isArray(img.tags) && img.tags.some((t) => t && t.toLowerCase().includes(searchQuery.toLowerCase()))) ||
       (img.client && img.client.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCat && matchesSearch;
   });
@@ -177,7 +178,7 @@ export const ImageLibraryModal: React.FC<ImageLibraryModalProps> = ({
                     )}
 
                     <div className="flex flex-wrap gap-1">
-                      {item.tags.slice(0, 3).map((tag, tIdx) => (
+                      {(item.tags || []).slice(0, 3).map((tag, tIdx) => (
                         <span key={tIdx} className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded">
                           #{tag}
                         </span>

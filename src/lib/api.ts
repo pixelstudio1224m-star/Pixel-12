@@ -6,15 +6,22 @@ import {
   DesignFormatType,
   DesignPillarType,
   DesignStyleType,
+  CreativeBrief,
   BlogPost,
   QuoteProposal,
   AgencyPlan,
   AgencyCustomService,
   CommercialSettings,
-  ImageLibraryItem
+  ImageLibraryItem,
+  ContentAsset,
+  DesignSlide,
+  ImageGenerationStatus
 } from '../types';
 import { initialWorkspaceData } from './defaultData';
 import { getWorkspaceFromFirestore, saveWorkspaceToFirestore } from './firebase';
+import { normalizeQuote, formatBankDetails, formatTerms } from './quotesData';
+
+export { normalizeQuote, formatBankDetails, formatTerms };
 
 export function sanitizeWorkspaceData(data: Partial<WorkspaceData> | null | undefined): WorkspaceData {
   if (!data) return initialWorkspaceData;
@@ -28,7 +35,7 @@ export function sanitizeWorkspaceData(data: Partial<WorkspaceData> | null | unde
     campaigns: Array.isArray(data.campaigns) ? data.campaigns : (initialWorkspaceData.campaigns || []),
     notifications: Array.isArray(data.notifications) ? data.notifications : (initialWorkspaceData.notifications || []),
     invitations: Array.isArray(data.invitations) ? data.invitations : [],
-    quotes: Array.isArray(data.quotes) ? data.quotes : (initialWorkspaceData.quotes || []),
+    quotes: (Array.isArray(data.quotes) ? data.quotes : (initialWorkspaceData.quotes || [])).map(normalizeQuote),
     plans: Array.isArray(data.plans) ? data.plans : (initialWorkspaceData.plans || []),
     customServices: Array.isArray(data.customServices) ? data.customServices : (initialWorkspaceData.customServices || []),
     crmContacts: Array.isArray(data.crmContacts) ? data.crmContacts : (initialWorkspaceData.crmContacts || []),
@@ -39,6 +46,14 @@ export function sanitizeWorkspaceData(data: Partial<WorkspaceData> | null | unde
     crmActivities: Array.isArray(data.crmActivities) ? data.crmActivities : (initialWorkspaceData.crmActivities || []),
     blogPosts: Array.isArray(data.blogPosts) ? data.blogPosts : (initialWorkspaceData.blogPosts || []),
     auditLogs: Array.isArray(data.auditLogs) ? data.auditLogs : (initialWorkspaceData.auditLogs || []),
+    imageLibrary: Array.isArray(data.imageLibrary) ? data.imageLibrary : (initialWorkspaceData.imageLibrary || []),
+    commercialSettings: {
+      ...(initialWorkspaceData.commercialSettings || {}),
+      ...(data.commercialSettings || {}),
+      defaultCurrency: data.commercialSettings?.defaultCurrency || initialWorkspaceData.commercialSettings?.defaultCurrency || 'USD',
+      bankDetails: formatBankDetails(data.commercialSettings?.bankDetails || initialWorkspaceData.commercialSettings?.bankDetails),
+      termsAndConditions: formatTerms(data.commercialSettings?.termsAndConditions || initialWorkspaceData.commercialSettings?.termsAndConditions)
+    }
   };
 }
 
@@ -248,11 +263,19 @@ export async function publishPostToSocial(postId: string, platforms: string[]) {
   return await res.json();
 }
 
-export async function generateDesignContentAI(params: {
-  format: DesignFormatType;
-  pillar: DesignPillarType;
-  style: DesignStyleType;
-  topic: string;
+export async function generateDesignContentAI(params: Partial<CreativeBrief> & {
+  format?: DesignFormatType;
+  pillar?: DesignPillarType;
+  style?: DesignStyleType;
+  topic?: string;
+  hook?: string;
+  objective?: string;
+  cta?: string;
+  audience?: string;
+  tone?: string;
+  additionalInstructions?: string;
+  freeformPrompt?: string;
+  slidesCount?: number;
   brandName?: string;
   authorName?: string;
 }): Promise<GeneratedDesignContent> {
@@ -265,6 +288,147 @@ export async function generateDesignContentAI(params: {
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ error: 'Error al generar diseño y contenido' }));
     throw new Error(errorData.error || 'Error al conectar con la IA de diseño');
+  }
+
+  return await res.json();
+}
+
+export async function parseFreeformPromptAI(prompt: string): Promise<Partial<CreativeBrief>> {
+  const res = await fetch('/api/ai/parse-freeform-prompt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Error al interpretar el comando libre');
+  }
+
+  return await res.json();
+}
+
+export async function refineCopyAI(params: {
+  text: string;
+  field?: 'caption' | 'hook' | 'cta' | 'headline';
+  action?: 'improve' | 'shorten' | 'persuasive' | 'direct';
+  brief?: any;
+}): Promise<{ refinedText: string }> {
+  const res = await fetch('/api/ai/refine-copy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) {
+    throw new Error('Error al refinar el copy');
+  }
+
+  return await res.json();
+}
+
+export async function generateSlideImageAI(params: {
+  prompt: string;
+  aspectRatio?: '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
+  style?: string;
+  slideIndex?: number;
+  contentId?: string;
+  postId?: string;
+}): Promise<{
+  success: boolean;
+  asset: ContentAsset;
+  imageUrl?: string;
+  status: ImageGenerationStatus;
+  error?: string;
+}> {
+  const res = await fetch('/api/ai/generate-slide-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'Error al contactar proveedor de imágenes' }));
+    throw new Error(errData.error || 'Fallo en la generación de la imagen');
+  }
+
+  return await res.json();
+}
+
+export async function regenerateAllImagesAI(params: {
+  contentId?: string;
+  postId?: string;
+  slides: DesignSlide[];
+  format?: DesignFormatType;
+  style?: string;
+}): Promise<{
+  success: boolean;
+  slides: DesignSlide[];
+  assets: ContentAsset[];
+  message: string;
+}> {
+  const res = await fetch('/api/ai/regenerate-images', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'Error al regenerar imágenes' }));
+    throw new Error(errData.error || 'Error al regenerar imágenes');
+  }
+
+  return await res.json();
+}
+
+export async function regenerateCopyAI(params: {
+  contentId?: string;
+  postId?: string;
+  slides: DesignSlide[];
+  brief: CreativeBrief;
+}): Promise<{
+  success: boolean;
+  content: GeneratedDesignContent;
+  message: string;
+}> {
+  const res = await fetch('/api/ai/regenerate-copy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'Error al regenerar copy' }));
+    throw new Error(errData.error || 'Error al regenerar copy');
+  }
+
+  return await res.json();
+}
+
+export async function saveDraftContentAI(content: GeneratedDesignContent, brandId?: string): Promise<{ success: boolean; post: Post }> {
+  const res = await fetch('/api/content/save-draft', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, brandId }),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'Error al guardar borrador' }));
+    throw new Error(errData.error || 'Error al guardar borrador');
+  }
+
+  return await res.json();
+}
+
+export async function submitContentForApprovalAI(content: GeneratedDesignContent, brandId?: string): Promise<{ success: boolean; post: Post }> {
+  const res = await fetch('/api/content/submit-approval', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, brandId }),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'Error al enviar a aprobación' }));
+    throw new Error(errData.error || 'Error al enviar a aprobación');
   }
 
   return await res.json();
@@ -351,20 +515,34 @@ export async function generatePostDesignAI(postId: string): Promise<{
 }
 
 export async function regenerateSingleSlideAI(
-  postId: string,
-  slideIndex: number,
-  changePrompt: string
+  params: {
+    postId?: string;
+    slideIndex: number;
+    changePrompt: string;
+    allSlides?: any[];
+    brief?: any;
+  } | string,
+  slideIndexArg?: number,
+  changePromptArg?: string
 ): Promise<{
   success: boolean;
   slide: any;
-  post: Post;
-  aiCredits: number;
+  slides?: any[];
+  post?: Post;
+  aiCredits?: number;
   message: string;
 }> {
+  let bodyPayload: any;
+  if (typeof params === 'string') {
+    bodyPayload = { postId: params, slideIndex: slideIndexArg, changePrompt: changePromptArg };
+  } else {
+    bodyPayload = params;
+  }
+
   const res = await fetch('/api/ai/regenerate-single-slide', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ postId, slideIndex, changePrompt })
+    body: JSON.stringify(bodyPayload)
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Error al rehacer la slide' }));
@@ -734,9 +912,14 @@ export interface InviteMemberResponse {
   success: boolean;
   emailSent: boolean;
   emailDeliveryError?: string;
+  mailtoUrl?: string;
+  previewText?: string;
   inviteUrl: string;
   token: string;
   message?: string;
+  member?: any;
+  members?: any[];
+  invitation?: any;
 }
 
 export async function inviteTeamMemberApi(payload: {
@@ -744,6 +927,7 @@ export async function inviteTeamMemberApi(payload: {
   name: string;
   role: string;
   invitedBy?: { id: string; name: string; email: string };
+  directAdd?: boolean;
 }): Promise<InviteMemberResponse> {
   const res = await fetch('/api/team/invite', {
     method: 'POST',
@@ -752,7 +936,7 @@ export async function inviteTeamMemberApi(payload: {
   });
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Error al enviar la invitación');
+    throw new Error(data.error || 'Error al procesar la incorporación');
   }
   return data;
 }
@@ -769,6 +953,47 @@ export async function resendTeamInvitationApi(payload: {
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || 'Error al reenviar la invitación');
+  }
+  return data;
+}
+
+export async function deleteTeamMemberApi(
+  memberId: string,
+  reassignToMemberId?: string,
+  callerRole?: string,
+  currentMembers?: any[]
+): Promise<{ success: boolean; message: string; deletedMemberId: string; reassignedTasksCount: number; members: any[] }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (callerRole) headers['x-user-role'] = callerRole;
+
+  const res = await fetch('/api/team/delete', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ memberId, reassignToMemberId, members: currentMembers })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al eliminar el colaborador del equipo');
+  }
+  return data;
+}
+
+export async function saveSmtpSettingsApi(settings: {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  from?: string;
+  secure?: boolean;
+}): Promise<{ success: boolean; message: string }> {
+  const res = await fetch('/api/team/smtp-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al guardar configuración SMTP');
   }
   return data;
 }
@@ -902,6 +1127,141 @@ export async function checkAccountAccessApi(email: string): Promise<{
   } catch (e) {
     return { allowed: true };
   }
+}
+
+// =========================================================================
+// MULTIMODAL AI API CLIENT (Gemini 3.x, Veo 3, Google Search, Transcribe)
+// =========================================================================
+
+export interface MultimodalChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}
+
+export interface MultimodalChatRequest {
+  message: string;
+  history?: MultimodalChatMessage[];
+  role?: 'strategist' | 'art_director' | 'growth' | 'copywriter';
+  model?: 'gemini-3.1-pro-preview' | 'gemini-3.5-flash' | 'gemini-3.1-flash-lite';
+  enableSearchGrounding?: boolean;
+  brandName?: string;
+  brandVoice?: string;
+  brandAudience?: string;
+}
+
+export interface MultimodalChatResponse {
+  reply: string;
+  modelUsed: string;
+  sources: Array<{ title: string; uri: string }>;
+}
+
+export async function multimodalChatAI(payload: MultimodalChatRequest): Promise<MultimodalChatResponse> {
+  const res = await fetch('/api/ai/multimodal-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al comunicarse con el modelo Gemini.');
+  }
+  return data;
+}
+
+export interface ImageStudioRequest {
+  prompt: string;
+  base64Image?: string;
+  mimeType?: string;
+  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+  mode?: 'create' | 'edit';
+}
+
+export interface ImageStudioResponse {
+  success: boolean;
+  imageUrl: string;
+  prompt: string;
+  mode: 'create' | 'edit';
+  aspectRatio: string;
+  modelUsed: string;
+}
+
+export async function imageStudioAI(payload: ImageStudioRequest): Promise<ImageStudioResponse> {
+  const res = await fetch('/api/ai/image-studio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al procesar imagen con Gemini 3.1.');
+  }
+  return data;
+}
+
+export interface VideoGenerateRequest {
+  prompt?: string;
+  imageBase64?: string;
+  imageMimeType?: string;
+  aspectRatio?: '16:9' | '9:16';
+  mode?: 'text-to-video' | 'image-to-video';
+}
+
+export async function videoGenerateAI(payload: VideoGenerateRequest): Promise<{ operationName: string }> {
+  const res = await fetch('/api/ai/video-generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al iniciar generación con Veo 3.');
+  }
+  return data;
+}
+
+export async function videoStatusAI(operationName: string): Promise<{ done: boolean; error?: any }> {
+  const res = await fetch('/api/ai/video-status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ operationName }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al consultar estado de Veo 3.');
+  }
+  return data;
+}
+
+export async function videoDownloadAI(operationName: string): Promise<{ success: boolean; videoUrl: string }> {
+  const res = await fetch('/api/ai/video-download', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ operationName }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al descargar video generado.');
+  }
+  return data;
+}
+
+export interface TranscribeAudioRequest {
+  audioBase64: string;
+  mimeType?: string;
+  prompt?: string;
+}
+
+export async function transcribeAudioAI(payload: TranscribeAudioRequest): Promise<{ transcript: string; modelUsed: string }> {
+  const res = await fetch('/api/ai/transcribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al transcribir audio con Gemini 3.5.');
+  }
+  return data;
 }
 
 

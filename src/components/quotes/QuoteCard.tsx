@@ -90,7 +90,7 @@ export const QuoteCard: React.FC<QuoteCardProps> = ({
     style: 'currency',
     currency: quote.currency || 'USD',
     minimumFractionDigits: 0
-  }).format(quote.total);
+  }).format(Number(quote.total) || 0);
 
   return (
     <div

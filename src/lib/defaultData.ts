@@ -496,7 +496,8 @@ export const initialWorkspaceData: WorkspaceData = {
       deadlineDate: '2026-09-03',
       deadlineTime: '14:00',
       status: 'COMPLETED',
-      tags: ['Diseño', 'Carrusel', 'Instagram'],
+      progress: 100,
+      tags: ['Diseño', 'Carrusel', 'Instagram', 'Prioridad Alta'],
       checklist: [
         { id: 'chk_1', text: 'Portada con gancho grande', completed: true },
         { id: 'chk_2', text: '5 slides de contenido con iconos', completed: true },
@@ -536,7 +537,8 @@ export const initialWorkspaceData: WorkspaceData = {
       deadlineDate: '2026-09-04',
       deadlineTime: '09:00',
       status: 'IN_PROGRESS',
-      tags: ['Programación', 'Community Manager'],
+      progress: 50,
+      tags: ['Estrategia', 'Community Manager', 'Marketing'],
       checklist: [
         { id: 'chk_21', text: 'Revisar hashtags adaptados para LinkedIn', completed: true },
         { id: 'chk_22', text: 'Confirmar hora 11:00 AM America/Guayaquil', completed: false }
@@ -560,12 +562,13 @@ export const initialWorkspaceData: WorkspaceData = {
       assigneeName: 'Mateo Silva',
       creatorId: 'mem_3',
       creatorName: 'Valentina Ríos',
-      priority: 'MEDIUM',
+      priority: 'HIGH',
       startDate: '2026-09-03',
       deadlineDate: '2026-09-05',
       deadlineTime: '17:00',
       status: 'TODO',
-      tags: ['Video', 'Reel', 'Edición'],
+      progress: 0,
+      tags: ['Audiovisual', 'Video', 'Urgente'],
       checklist: [
         { id: 'chk_31', text: 'Subtítulos amarillos/blancos con resaltado', completed: false },
         { id: 'chk_32', text: 'B-roll en segundos 3 a 15', completed: false },
@@ -593,7 +596,8 @@ export const initialWorkspaceData: WorkspaceData = {
       deadlineDate: '2026-09-08',
       deadlineTime: '12:00',
       status: 'TODO',
-      tags: ['Diseño', 'Testimonio'],
+      progress: 25,
+      tags: ['Diseño', 'Marketing', 'Revisión Cliente'],
       checklist: [],
       comments: [],
       relatedPostId: 'post_3',
@@ -602,6 +606,31 @@ export const initialWorkspaceData: WorkspaceData = {
       relatedCampaignName: 'Campaña Captación PyMEs Septiembre 2026',
       history: [],
       createdAt: '2026-09-02T16:10:00Z'
+    },
+    {
+      id: 'task_5',
+      brandId: 'brand_pixel12',
+      title: 'Estrategia de contenidos y pilares de captación Q4',
+      description: 'Definir pilares estratégicos de atracción, nutrición y conversión para la marca.',
+      assigneeId: 'mem_1',
+      assigneeName: 'Camila Pinto',
+      creatorId: 'mem_1',
+      creatorName: 'Camila Pinto',
+      priority: 'HIGH',
+      startDate: '2026-09-04',
+      deadlineDate: '2026-09-12',
+      deadlineTime: '18:00',
+      status: 'IN_PROGRESS',
+      progress: 65,
+      tags: ['Estrategia', 'Marketing', 'Sprint Activo'],
+      checklist: [
+        { id: 'chk_51', text: 'Benchmark de competidores directos', completed: true },
+        { id: 'chk_52', text: 'Definición de 4 ejes temáticos', completed: true },
+        { id: 'chk_53', text: 'Presentación ejecutiva de estrategia', completed: false }
+      ],
+      comments: [],
+      history: [],
+      createdAt: '2026-09-04T10:00:00Z'
     }
   ],
   socialAccounts: [
